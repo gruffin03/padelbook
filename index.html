@@ -1503,7 +1503,9 @@ const Auth = {
   async _loadProfile(userId) {
     const { data: profile } = await sb.from('profiles').select('*').eq('id', userId).single();
     if (!profile) return null;
+    console.log('Profile raw from Supabase:', profile);
     const p = toCamel(profile);
+    console.log('Profile after toCamel:', p);
     // Charger le profil coach si présent
     if (p.coachId) {
       const { data: coach } = await sb.from('coaches').select('*').eq('id', p.coachId).single();
