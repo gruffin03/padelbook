@@ -1026,6 +1026,26 @@ select.input-field { cursor: pointer; }
 
 <div id="toast"></div>
 <div id="app"></div>
+<div id="review-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:20px;padding:28px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,0.2)">
+    <div style="font-size:20px;font-weight:800;margin-bottom:4px">⭐ Laisser un avis</div>
+    <div id="review-coach-name" style="color:var(--muted);font-size:14px;margin-bottom:20px"></div>
+    <div style="margin-bottom:16px">
+      <label style="font-size:13px;font-weight:600;display:block;margin-bottom:8px">Note</label>
+      <div style="display:flex;gap:8px">
+        ${[1,2,3,4,5].map(n => `<button onclick="App.setReviewNote(${n})" id="star-${n}" style="font-size:28px;background:none;border:none;cursor:pointer;opacity:0.3;transition:opacity 0.15s">★</button>`).join('')}
+      </div>
+    </div>
+    <div class="input-group">
+      <label>Commentaire</label>
+      <textarea id="review-text" class="input-field" rows="4" placeholder="Décrivez votre expérience avec ce coach…"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn btn-secondary" style="flex:1" onclick="App.closeReviewModal()">Annuler</button>
+      <button class="btn btn-primary" style="flex:1" onclick="App.submitReview()">✓ Publier l'avis</button>
+    </div>
+  </div>
+</div>
 
 <script>
 /* ============================================================
@@ -2792,13 +2812,15 @@ const App = {
     const tabs = ['bookings', 'reviews', 'profil'];
     const tabLabels = { bookings: '📅 Réservations', reviews: '⭐ Mes avis', profil: '👤 Mon profil' };
 
+    const myReviewedBookings = new Set(DB.get('reviews').filter(r => r.userId === user.id).map(r => r.bookingId));
     const bookingsList = bookings.length
       ? bookings.map(b => {
           const statusMap = { en_attente: ['badge-orange','⏳ En attente'], confirme: ['badge-green','✅ Confirmé'], annule: ['badge-red','❌ Annulé'] };
           const [cls, label] = statusMap[b.statut] || ['badge-gray','–'];
+          const alreadyReviewed = myReviewedBookings.has(b.id);
           return `
             <div class="booking-item">
-              ${avatarHtml(b.coachNom.substring(0,2).toUpperCase(), 'linear-gradient(135deg,#1a2e28,#2cc4a8)', 'sm')}
+              ${avatarHtml((b.coachNom||'??').substring(0,2).toUpperCase(), 'linear-gradient(135deg,#1a2e28,#2cc4a8)', 'sm')}
               <div class="booking-info">
                 <div class="booking-name">${b.coachNom}</div>
                 <div class="booking-detail">${b.serviceLabel} · ${formatDate(b.date)} à ${b.heure}</div>
@@ -2806,7 +2828,9 @@ const App = {
               </div>
               <div class="booking-actions">
                 <span class="badge ${cls}">${label}</span>
-                ${b.statut !== 'annule' ? `<button class="btn btn-danger btn-sm" onclick="App.cancelBooking('${b.id}')">Annuler</button>` : ''}
+                ${b.statut === 'confirme' && !alreadyReviewed ? `<button class="btn btn-secondary btn-sm" onclick="App.openReviewModal('${b.id}','${b.coachId}','${b.coachNom}')">⭐ Avis</button>` : ''}
+                ${b.statut === 'confirme' && alreadyReviewed ? `<span style="font-size:12px;color:var(--muted)">✅ Avis posté</span>` : ''}
+                ${b.statut === 'en_attente' ? `<button class="btn btn-danger btn-sm" onclick="App.cancelBooking('${b.id}')">Annuler</button>` : ''}
               </div>
             </div>`;
         }).join('')
@@ -2851,6 +2875,57 @@ const App = {
             <p style="font-size:12px;color:var(--muted);margin:0">JPG ou PNG · max 2 Mo</p>
           </div>`}
       </div>`;
+  },
+
+  _reviewBookingId: null,
+  _reviewCoachId: null,
+  _reviewNote: 0,
+
+  openReviewModal(bookingId, coachId, coachNom) {
+    this._reviewBookingId = bookingId;
+    this._reviewCoachId = coachId;
+    this._reviewNote = 0;
+    document.getElementById('review-coach-name').textContent = coachNom;
+    document.getElementById('review-text').value = '';
+    [1,2,3,4,5].forEach(n => document.getElementById('star-'+n).style.opacity = '0.3');
+    document.getElementById('review-modal').style.display = 'flex';
+  },
+
+  closeReviewModal() {
+    document.getElementById('review-modal').style.display = 'none';
+  },
+
+  setReviewNote(n) {
+    this._reviewNote = n;
+    [1,2,3,4,5].forEach(i => document.getElementById('star-'+i).style.opacity = i <= n ? '1' : '0.3');
+  },
+
+  async submitReview() {
+    if (!this._reviewNote) { toast('❌ Choisissez une note'); return; }
+    const commentaire = document.getElementById('review-text').value.trim();
+    if (!commentaire) { toast('❌ Écrivez un commentaire'); return; }
+    const user = Auth.currentUser;
+    try {
+      await DB.insert('reviews', {
+        userId: user.id,
+        coachId: this._reviewCoachId,
+        bookingId: this._reviewBookingId,
+        auteur: `${user.prenom || ''} ${user.nom || ''}`.trim(),
+        note: this._reviewNote,
+        commentaire,
+        date: new Date().toISOString().slice(0,10),
+        modere: true,
+      });
+      // Mettre à jour la note moyenne du coach
+      const reviews = DB.get('reviews').filter(r => r.coachId === this._reviewCoachId);
+      const avg = (reviews.reduce((s,r) => s + r.note, 0) / reviews.length).toFixed(1);
+      DB.update('coaches', this._reviewCoachId, { rating: parseFloat(avg) });
+      this.closeReviewModal();
+      toast('✅ Avis publié, merci !');
+      this.render();
+    } catch(e) {
+      toast('❌ Erreur : ' + e.message);
+    }
   },
 
   cancelBooking(id) {
