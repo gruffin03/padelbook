@@ -1503,9 +1503,7 @@ const Auth = {
   async _loadProfile(userId) {
     const { data: profile } = await sb.from('profiles').select('*').eq('id', userId).single();
     if (!profile) return null;
-    console.log('Profile raw from Supabase:', profile);
     const p = toCamel(profile);
-    console.log('Profile after toCamel:', p);
     // Charger le profil coach si présent
     if (p.coachId) {
       const { data: coach } = await sb.from('coaches').select('*').eq('id', p.coachId).single();
@@ -1602,9 +1600,11 @@ const App = {
     let logoutBtn = '';
     if (user) {
       const dest = user.role === 'admin' ? 'admin' : user.role === 'coach' ? 'coach-dashboard' : 'user-dashboard';
+      const navInitiales = user.initiales || ((user.prenom?.[0]||'') + (user.nom?.[0]||'')).toUpperCase() || '?';
+      const navNom = [user.prenom, user.nom].filter(v => v && v !== 'undefined' && v !== 'null').join(' ') || user.email || '–';
       actionsHtml = '<div class="navbar-user" onclick="App.go(\'' + dest + '\')">'
-        + avatarHtml(user.initiales, user.avatarColor || 'linear-gradient(135deg,#5be0c8,#2cc4a8)', 'sm')
-        + '<span>' + [user.prenom, user.nom].filter(v => v && v !== 'undefined' && v !== 'null').join(' ') + '</span></div>';
+        + avatarHtml(navInitiales, user.avatarColor || 'linear-gradient(135deg,#5be0c8,#2cc4a8)', 'sm')
+        + '<span>' + navNom + '</span></div>';
       logoutBtn = '<button class="btn btn-secondary btn-sm" onclick="Auth.logout().then(()=>App.go(\'search\'))">✕</button>';
     } else {
       actionsHtml = '<button class="btn btn-secondary btn-sm" onclick="App.go(\'login\')">Connexion</button>'
