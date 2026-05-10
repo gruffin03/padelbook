@@ -3132,11 +3132,14 @@ const App = {
         </div>`;
     }
 
-    const nbPersonnes = { solo:1, duo:2, trio:3, collectif:5 };
-    const getLabelNb = l => l&&l.toLowerCase().includes('duo')?2:l&&l.toLowerCase().includes('trio')?3:l&&l.toLowerCase().includes('collectif')?5:1;
+    const getNbPersonnes = b => {
+      if (b.service === 'duo' || (b.serviceLabel||'').toLowerCase().includes('duo')) return 2;
+      if (b.service === 'trio' || (b.serviceLabel||'').toLowerCase().includes('trio')) return 3;
+      if (b.service === 'collectif' || (b.serviceLabel||'').toLowerCase().includes('collectif')) return 5;
+      return 1;
+    };
     const confirmedB = bookings.filter(b=>b.statut==='confirme');
-    console.log('confirmed bookings:', confirmedB.map(b=>({service:b.service,serviceLabel:b.serviceLabel,prix:b.prix,statut:b.statut})));
-    const totalRevenu = confirmedB.reduce((s,b)=>{ const n=nbPersonnes[b.service]||getLabelNb(b.serviceLabel); console.log('booking:',b.service,b.prix,'x',n,'=',b.prix*n); return s+(b.prix||0)*n; },0);
+    const totalRevenu = confirmedB.reduce((s,b) => s + (b.prix||0) * getNbPersonnes(b), 0);
 
     return `
       <div class="dashboard-header">
@@ -3253,9 +3256,13 @@ const App = {
     const bookings = DB.get('bookings').filter(b => b.coachId === coach.id);
     const reviews = DB.get('reviews').filter(r => r.coachId === coach.id);
     const confirmedBookings = bookings.filter(b => b.statut === 'confirme');
-    const nbPers = { solo:1, duo:2, trio:3, collectif:5 };
-    const getLabelNb2 = l => l&&l.toLowerCase().includes('duo')?2:l&&l.toLowerCase().includes('trio')?3:l&&l.toLowerCase().includes('collectif')?5:1;
-    const revenue = confirmedBookings.reduce((s, b) => s + (b.prix||0)*(nbPers[b.service]||getLabelNb2(b.serviceLabel)), 0);
+    const getNbP = b => {
+      if (b.service === 'duo' || (b.serviceLabel||'').toLowerCase().includes('duo')) return 2;
+      if (b.service === 'trio' || (b.serviceLabel||'').toLowerCase().includes('trio')) return 3;
+      if (b.service === 'collectif' || (b.serviceLabel||'').toLowerCase().includes('collectif')) return 5;
+      return 1;
+    };
+    const revenue = confirmedBookings.reduce((s, b) => s + (b.prix||0) * getNbP(b), 0);
     const currentPlan = coach.plan || 'decouverte';
 
     const bookingRows = bookings.slice(0,8).map(b => {
