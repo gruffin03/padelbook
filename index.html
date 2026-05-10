@@ -1237,23 +1237,24 @@ function planExpiryLabel(coach) {
 }
 
 function makeGCalLink({ title, date, heure, duree = 60, lieu, description }) {
-  // Construire la date de début : ex "2024-12-15" + "10:00"
   const [year, month, day] = date.split('-');
   const [hour, min] = heure.split(':');
-  const start = `${year}${month}${day}T${hour}${min}00`;
-  // Calculer la fin (duree en minutes)
-  const endDate = new Date(`${date}T${heure}:00`);
-  endDate.setMinutes(endDate.getMinutes() + duree);
+  const start = `${year}${month}${day}T${hour.padStart(2,'0')}${(min||'00').padStart(2,'0')}00`;
+
+  const endDate = new Date(+year, +month - 1, +day, +hour, +(min||0) + duree);
+  const ey = String(endDate.getFullYear());
+  const emo = String(endDate.getMonth() + 1).padStart(2,'0');
+  const ed = String(endDate.getDate()).padStart(2,'0');
   const eh = String(endDate.getHours()).padStart(2,'0');
   const em = String(endDate.getMinutes()).padStart(2,'0');
-  const end = `${year}${month}${day}T${eh}${em}00`;
+  const end = `${ey}${emo}${ed}T${eh}${em}00`;
 
   const params = new URLSearchParams({
     action: 'TEMPLATE',
-    text: title,
+    text: title || 'Cours Padel',
     dates: `${start}/${end}`,
-    details: description,
-    location: lieu,
+    details: description || '',
+    location: lieu || '',
   });
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
