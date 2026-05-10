@@ -1413,6 +1413,7 @@ const Auth = {
     if (error) throw new Error(error.message);
     const profile = await this._loadProfile(data.user.id);
     this.currentUser = profile;
+    if (profile?.role) localStorage.setItem('pb_role', profile.role);
     return profile;
   },
 
@@ -1506,6 +1507,7 @@ const Auth = {
   async logout() {
     await sb.auth.signOut();
     this.currentUser = null;
+    localStorage.removeItem('pb_role');
   },
 
   async restore() {
@@ -3710,19 +3712,30 @@ async function sendEmail({ to, subject, html }) {
 // BOOT
 // ============================================================
 (async function init() {
-  // Afficher un loader pendant le chargement
+  // Redirection immédiate depuis localStorage (avant même que Supabase réponde)
+  const cachedRole = localStorage.getItem('pb_role');
+  if (cachedRole === 'coach') App.view = 'coach-dashboard';
+  else if (cachedRole === 'admin') App.view = 'admin';
+  else if (cachedRole === 'user') App.view = 'search';
+
   document.getElementById('app').innerHTML =
     '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-size:14px;color:#8888aa">Chargement…</div>';
 
   await Auth.restore();
   await DB.init();
   requestNotifPermission();
-  // Rediriger vers le bon tableau de bord si connecté
+
   if (Auth.currentUser) {
     const role = Auth.currentUser.role;
-    if (role === 'admin') App.view = 'admin';
-    else if (role === 'coach') App.view = 'coach-dashboard';
-    else App.view = 'search';
+    if (role) localStorage.setItem('pb_role', role);
+    if (App.view === 'home') {
+      if (role === 'admin') App.view = 'admin';
+      else if (role === 'coach') App.view = 'coach-dashboard';
+      else App.view = 'search';
+    }
+  } else {
+    localStorage.removeItem('pb_role');
+    App.view = 'home';
   }
   App.render();
 })();
