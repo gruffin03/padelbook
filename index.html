@@ -2366,8 +2366,10 @@ const App = {
         <div class="search-box">
           <div class="search-row">
             <input class="search-input" id="search-input" type="text" placeholder="🔍  Ville, code postal ou nom…"
-              value="${this.searchQuery}" oninput="App.searchQuery=this.value;App.debouncedSearch()">
-            <button class="btn btn-primary" onclick="App.geolocate()">📍 Près de moi</button>
+              value="${this.searchQuery}" oninput="App.searchQuery=this.value;App.debouncedSearch()"
+              onkeydown="if(event.key==='Enter'){App.searchQuery=this.value;App.render();}">
+            <button class="btn btn-primary" onclick="App.searchQuery=document.getElementById('search-input').value;App.render()">🔍 Rechercher</button>
+            <button class="btn btn-secondary" onclick="App.geolocate()">📍 Près de moi</button>
           </div>
           <div class="search-filters">
             <select class="filter-select input-field" style="border-radius:20px;font-size:12px;padding:7px 14px"
