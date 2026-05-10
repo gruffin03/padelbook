@@ -1657,7 +1657,7 @@ const App = {
         + '<button class="btn btn-primary btn-sm" onclick="App.go(\'register\')">Inscription</button>';
     }
     const logoDest = user?.role === 'coach' ? 'coach-dashboard' : user?.role === 'admin' ? 'admin' : user ? 'search' : 'home';
-    const extraBtn = !user ? '<button class="btn btn-secondary btn-sm" onclick="App.go(\'search\')">Voir les coachs</button>' : '';
+    const extraBtn = '';
     return '<nav class="navbar"><div class="navbar-inner">'
       + '<div class="navbar-logo" onclick="App.go(\'' + logoDest + '\')">'
       + '<div class="navbar-logo-icon">🎾</div>'
