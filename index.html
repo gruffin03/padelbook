@@ -1513,16 +1513,25 @@ const Auth = {
     if (session?.user) {
       this.currentUser = await this._loadProfile(session.user.id);
     }
-    // Gestion retour OAuth Google
     sb.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user && !this.currentUser) {
-        this.currentUser = await this._loadProfile(session.user.id);
-        await DB.init();
-        App.render();
+      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') && session?.user) {
+        if (!this.currentUser) {
+          this.currentUser = await this._loadProfile(session.user.id);
+          await DB.init();
+        }
+        // Rediriger hors de la page d'accueil si on y est encore
+        if (App.view === 'home' || App.view === 'home-joueur' || App.view === 'home-coach') {
+          const role = this.currentUser?.role;
+          if (role === 'admin') App.go('admin');
+          else if (role === 'coach') App.go('coach-dashboard');
+          else App.go('search');
+        } else {
+          App.render();
+        }
       }
       if (event === 'SIGNED_OUT') {
         this.currentUser = null;
-        App.render();
+        App.go('home');
       }
     });
   },
