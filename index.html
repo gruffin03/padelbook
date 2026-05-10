@@ -3111,7 +3111,8 @@ const App = {
         </div>`;
     }
 
-    const totalRevenu = bookings.filter(b=>b.statut==='confirme').reduce((s,b)=>s+b.prix,0);
+    const nbPersonnes = { solo:1, duo:2, trio:3, collectif:5 };
+    const totalRevenu = bookings.filter(b=>b.statut==='confirme').reduce((s,b)=>s+(b.prix||0)*(nbPersonnes[b.service]||1),0);
 
     return `
       <div class="dashboard-header">
@@ -3228,7 +3229,8 @@ const App = {
     const bookings = DB.get('bookings').filter(b => b.coachId === coach.id);
     const reviews = DB.get('reviews').filter(r => r.coachId === coach.id);
     const confirmedBookings = bookings.filter(b => b.statut === 'confirme');
-    const revenue = confirmedBookings.reduce((s, b) => s + (b.prix||0), 0);
+    const nbPers = { solo:1, duo:2, trio:3, collectif:5 };
+    const revenue = confirmedBookings.reduce((s, b) => s + (b.prix||0)*(nbPers[b.service]||1), 0);
     const currentPlan = coach.plan || 'decouverte';
 
     const bookingRows = bookings.slice(0,8).map(b => {
