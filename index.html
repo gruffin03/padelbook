@@ -2913,33 +2913,80 @@ const App = {
             </label>
             <p style="font-size:12px;color:var(--muted);margin:0">JPG ou PNG · max 2 Mo</p>
           </div>
-          <!-- INFOS JOUEUR -->
+          <!-- INFOS GÉNÉRALES -->
+          <div style="font-size:13px;font-weight:700;color:#2cc4a8;text-transform:uppercase;letter-spacing:.06em;margin:8px 0 12px">Informations générales</div>
           <div class="input-group"><label>Prénom</label><input class="input-field" id="u-prenom" value="${user.prenom||''}" placeholder="Votre prénom"></div>
           <div class="input-group"><label>Nom</label><input class="input-field" id="u-nom" value="${user.nom||''}" placeholder="Votre nom"></div>
           <div class="input-group"><label>Âge</label><input class="input-field" type="number" id="u-age" value="${user.age||''}" placeholder="Ex: 32" min="10" max="99"></div>
+          <div class="input-group"><label>Ville</label><input class="input-field" id="u-ville" value="${user.ville||''}" placeholder="Ex: Lyon"></div>
+          <div class="input-group"><label>Téléphone <span style="font-weight:400;color:var(--muted)">(visible uniquement par votre coach)</span></label><input class="input-field" type="tel" id="u-tel" value="${user.telephone||''}" placeholder="Ex: 06 12 34 56 78"></div>
+
+          <!-- NIVEAU -->
+          <div style="font-size:13px;font-weight:700;color:#2cc4a8;text-transform:uppercase;letter-spacing:.06em;margin:20px 0 12px">Niveau & pratique</div>
           <div class="input-group">
             <label>Classement FFT</label>
             <select class="input-field" id="u-classement">
-              ${['','NC','P25','P100','P250','P500','P1000','P1500','P2000'].map(v => `<option value="${v}" ${(user.classement||'')=== v?'selected':''}>${v||'Non classé'}</option>`).join('')}
+              ${['','NC','P25','P100','P250','P500','P1000','P1500','P2000'].map(v => `<option value="${v}" ${(user.classement||'')===v?'selected':''}>${v||'Non classé'}</option>`).join('')}
             </select>
           </div>
           <div class="input-group">
             <label>Niveau de jeu</label>
             <select class="input-field" id="u-niveau">
-              ${['','Débutant','Intermédiaire','Avancé','Compétiteur'].map(v => `<option value="${v}" ${(user.niveau||'')=== v?'selected':''}>${v||'Non renseigné'}</option>`).join('')}
+              ${['','Débutant','Intermédiaire','Avancé','Compétiteur'].map(v => `<option value="${v}" ${(user.niveau||'')===v?'selected':''}>${v||'Non renseigné'}</option>`).join('')}
             </select>
           </div>
           <div class="input-group">
-            <label>Objectif</label>
+            <label>Côté favori</label>
+            <select class="input-field" id="u-cote">
+              ${['','Droite','Gauche','Les deux'].map(v => `<option value="${v}" ${(user.cote||'')===v?'selected':''}>${v||'Non renseigné'}</option>`).join('')}
+            </select>
+          </div>
+          <div class="input-group">
+            <label>Fréquence de jeu</label>
+            <select class="input-field" id="u-frequence">
+              ${['','1 fois par semaine','2-3 fois par semaine','Tous les jours','Occasionnel'].map(v => `<option value="${v}" ${(user.frequence||'')===v?'selected':''}>${v||'Non renseigné'}</option>`).join('')}
+            </select>
+          </div>
+          <div class="input-group">
+            <label>Disponibilités générales</label>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+              ${['Matins','Après-midis','Soirs','Week-end'].map(d => {
+                const dispos = user.dispos || [];
+                const checked = dispos.includes(d);
+                return `<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;padding:6px 12px;border-radius:20px;background:${checked?'rgba(44,196,168,0.15)':'var(--card)'};border:1px solid ${checked?'#2cc4a8':'var(--border)'}"><input type="checkbox" ${checked?'checked':''} data-dispo="${d}" style="accent-color:#2cc4a8"> ${d}</label>`;
+              }).join('')}
+            </div>
+          </div>
+
+          <!-- OBJECTIFS -->
+          <div style="font-size:13px;font-weight:700;color:#2cc4a8;text-transform:uppercase;letter-spacing:.06em;margin:20px 0 12px">Objectifs</div>
+          <div class="input-group">
+            <label>Objectif principal</label>
             <select class="input-field" id="u-objectif">
-              ${['','Progresser en loisir','Atteindre le niveau compétition','Préparer un tournoi','Reprendre le sport','Découvrir le padel'].map(v => `<option value="${v}" ${(user.objectif||'')=== v?'selected':''}>${v||'Non renseigné'}</option>`).join('')}
+              ${['','Progresser en loisir','Atteindre le niveau compétition','Préparer un tournoi','Reprendre le sport','Découvrir le padel'].map(v => `<option value="${v}" ${(user.objectif||'')===v?'selected':''}>${v||'Non renseigné'}</option>`).join('')}
             </select>
           </div>
           <div class="input-group">
             <label>🏆 Palmarès</label>
             <textarea class="input-field" id="u-palmares" rows="3" placeholder="Ex: Vainqueur P25 Lyon 2024, demi-finale Open Bordeaux…">${user.palmares||''}</textarea>
           </div>
-          <button class="btn btn-primary btn-full" onclick="App.saveUserProfile()">💾 Enregistrer</button>`}
+
+          <!-- PARTENAIRE -->
+          <div style="font-size:13px;font-weight:700;color:#2cc4a8;text-transform:uppercase;letter-spacing:.06em;margin:20px 0 12px">Recherche partenaire</div>
+          <div class="input-group">
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+              <input type="checkbox" id="u-cherche-partenaire" ${user.cherchePartenaire?'checked':''} style="accent-color:#2cc4a8;width:18px;height:18px">
+              <span>Je cherche un partenaire d'entraînement</span>
+            </label>
+          </div>
+          <div class="input-group">
+            <label>Niveau souhaité du partenaire</label>
+            <select class="input-field" id="u-niveau-partenaire">
+              ${['','Même niveau que moi','Débutant','Intermédiaire','Avancé','Compétiteur','Peu importe'].map(v => `<option value="${v}" ${(user.niveauPartenaire||'')===v?'selected':''}>${v||'Non renseigné'}</option>`).join('')}
+            </select>
+          </div>
+
+          <button class="btn btn-primary btn-full" style="margin-top:8px" onclick="App.saveUserProfile()">💾 Enregistrer le profil</button>`}
       </div>`;
   },
 
@@ -3462,15 +3509,23 @@ const App = {
   },
 
   saveUserProfile() {
-    const prenom   = document.getElementById('u-prenom')?.value?.trim();
-    const nom      = document.getElementById('u-nom')?.value?.trim();
-    const age      = parseInt(document.getElementById('u-age')?.value) || null;
-    const classement = document.getElementById('u-classement')?.value || '';
-    const niveau   = document.getElementById('u-niveau')?.value || '';
-    const objectif = document.getElementById('u-objectif')?.value || '';
-    const palmares = document.getElementById('u-palmares')?.value?.trim() || '';
-    DB.update('profiles', Auth.currentUser.id, { prenom, nom, age, classement, niveau, objectif, palmares });
-    Object.assign(Auth.currentUser, { prenom, nom, age, classement, niveau, objectif, palmares });
+    const prenom           = document.getElementById('u-prenom')?.value?.trim();
+    const nom              = document.getElementById('u-nom')?.value?.trim();
+    const age              = parseInt(document.getElementById('u-age')?.value) || null;
+    const ville            = document.getElementById('u-ville')?.value?.trim() || '';
+    const telephone        = document.getElementById('u-tel')?.value?.trim() || '';
+    const classement       = document.getElementById('u-classement')?.value || '';
+    const niveau           = document.getElementById('u-niveau')?.value || '';
+    const cote             = document.getElementById('u-cote')?.value || '';
+    const frequence        = document.getElementById('u-frequence')?.value || '';
+    const dispos           = [...document.querySelectorAll('[data-dispo]:checked')].map(el => el.dataset.dispo);
+    const objectif         = document.getElementById('u-objectif')?.value || '';
+    const palmares         = document.getElementById('u-palmares')?.value?.trim() || '';
+    const cherchePartenaire = document.getElementById('u-cherche-partenaire')?.checked || false;
+    const niveauPartenaire = document.getElementById('u-niveau-partenaire')?.value || '';
+    const data = { prenom, nom, age, ville, telephone, classement, niveau, cote, frequence, dispos, objectif, palmares, cherchePartenaire, niveauPartenaire };
+    DB.update('profiles', Auth.currentUser.id, data);
+    Object.assign(Auth.currentUser, data);
     toast('✅ Profil enregistré');
     this.render();
   },
