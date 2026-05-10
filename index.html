@@ -2878,15 +2878,19 @@ const App = {
       : `<div class="empty"><div class="empty-icon">📅</div><div class="empty-title">Aucune réservation</div><button class="btn btn-primary" onclick="App.go('search')">Trouver un coach</button></div>`;
 
     const myReviews = DB.get('reviews').filter(r => r.userId === user.id);
+    const coaches = DB.get('coaches');
     const reviewsList = myReviews.length
-      ? myReviews.map(r => `
+      ? myReviews.map(r => {
+          const coachNom = coaches.find(c => c.id === r.coachId)?.nom || 'Coach';
+          return `
           <div class="review-card">
             <div class="review-header">
-              <div class="review-meta"><div class="review-author">Coach: Réservation ${r.coachId}</div><div class="review-date">${r.date}</div></div>
+              <div class="review-meta"><div class="review-author">${coachNom}</div><div class="review-date">${r.date}</div></div>
               ${starsHtml(r.note, true)}
             </div>
-            <div class="review-text">${r.commentaire}</div>
-          </div>`).join('')
+            ${r.commentaire ? `<div class="review-text">${r.commentaire}</div>` : ''}
+          </div>`;
+        }).join('')
       : `<div class="empty"><div class="empty-icon">⭐</div><div class="empty-title">Aucun avis posté</div></div>`;
 
     return `
