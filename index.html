@@ -1042,7 +1042,7 @@ select.input-field { cursor: pointer; }
     </div>
     <div style="margin-bottom:16px">
       <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px">Commentaire</label>
-      <textarea id="review-text" style="width:100%;border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px;font-size:14px;font-family:inherit;resize:vertical;outline:none" rows="4" placeholder="Décrivez votre expérience avec ce coach…"></textarea>
+      <textarea id="review-text" style="width:100%;border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px;font-size:14px;font-family:inherit;resize:vertical;outline:none" rows="4" placeholder="Décrivez votre expérience avec ce coach… (optionnel)"></textarea>
     </div>
     <div style="display:flex;gap:10px">
       <button class="btn btn-secondary" style="flex:1" onclick="App.closeReviewModal()">Annuler</button>
@@ -3018,7 +3018,6 @@ const App = {
   async submitReview() {
     if (!this._reviewNote) { toast('❌ Choisissez une note'); return; }
     const commentaire = document.getElementById('review-text').value.trim();
-    if (!commentaire) { toast('❌ Écrivez un commentaire'); return; }
     const user = Auth.currentUser;
     try {
       await DB.insert('reviews', {
