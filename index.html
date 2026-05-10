@@ -1609,12 +1609,18 @@ const App = {
 
   buildBottomNav() {
     const user = Auth.currentUser;
-    const navItems = user ? [
-      { icon: '🏠', label: 'Accueil',    view: 'search' },
-      { icon: '🔍', label: 'Rechercher', view: 'search' },
-      { icon: '📅', label: user.role === 'coach' ? 'Mes cours' : 'Réservations', view: user.role === 'coach' ? 'coach-dashboard' : 'user-dashboard' },
-      { icon: '👤', label: user.role === 'admin' ? 'Admin' : user.role === 'coach' ? 'Coach' : 'Profil', view: user.role === 'admin' ? 'admin' : user.role === 'coach' ? 'coach-dashboard' : 'user-dashboard' },
+    const homeView = user?.role === 'coach' ? 'coach-dashboard' : user?.role === 'admin' ? 'admin' : 'search';
+    const navItems = user ? (user.role === 'coach' ? [
+      { icon: '🏠', label: 'Accueil',        view: 'coach-dashboard' },
+      { icon: '📅', label: 'Réservations',   view: 'coach-dashboard' },
+      { icon: '📆', label: 'Disponibilités', view: 'coach-dashboard' },
+      { icon: '👤', label: 'Mon profil',     view: 'coach-dashboard' },
     ] : [
+      { icon: '🏠', label: 'Accueil',        view: homeView },
+      { icon: '🔍', label: 'Rechercher',     view: 'search' },
+      { icon: '📅', label: 'Réservations',   view: 'user-dashboard' },
+      { icon: '👤', label: 'Profil',         view: 'user-dashboard' },
+    ]) : [
       { icon: '🏠', label: 'Accueil',    view: 'search' },
       { icon: '🔍', label: 'Explorer',   view: 'search' },
       { icon: '🔐', label: 'Connexion',  view: 'login' },
