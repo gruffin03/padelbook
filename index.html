@@ -2512,7 +2512,7 @@ const App = {
 
     const tarifsHtml = `
       <div class="tarifs-grid">
-        ${[['solo','Particulier',1,'1 joueur'],['duo','Duo',2,'2 joueurs'],['trio','Trio',3,'3 joueurs'],['collectif','Collectif',5,'4-6 joueurs']].map(([k, label, nb, desc]) => `
+        ${[['solo','Particulier',1,'1 joueur'],['duo','Duo',2,'2 joueurs'],['trio','Trio',3,'3 joueurs'],['collectif','Collectif',4,'4 joueurs max']].map(([k, label, nb, desc]) => `
           <div class="tarif-card">
             <div class="tarif-price">${coach.tarifs[k]}€<span style="font-size:13px;font-weight:500;color:var(--muted)">/pers.</span></div>
             <div class="tarif-type">${label}</div>
@@ -2662,7 +2662,7 @@ const App = {
         { key: 'solo', label: 'Cours individuel', desc: 'Vous seul avec le coach · 1 personne', icon: '🎯', prix: coach.tarifs.solo, nb: 1 },
         { key: 'duo', label: 'Cours duo', desc: 'Vous + 1 ami · 2 personnes', icon: '👥', prix: coach.tarifs.duo, nb: 2 },
         { key: 'trio', label: 'Cours trio', desc: 'Vous + 2 amis · 3 personnes', icon: '🏆', prix: coach.tarifs.trio, nb: 3 },
-        { key: 'collectif', label: 'Cours collectif', desc: 'Groupe de 4 à 6 personnes', icon: '🌟', prix: coach.tarifs.collectif, nb: 5 },
+        { key: 'collectif', label: 'Cours collectif', desc: 'Groupe de 4 joueurs max', icon: '🌟', prix: coach.tarifs.collectif, nb: 4 },
       ];
       const nextStep = (this.selectedDate && this.selectedSlot) ? 3 : 2;
       return `
@@ -2854,28 +2854,42 @@ const App = {
     const tabLabels = { bookings: '📅 Réservations', reviews: '⭐ Mes avis', profil: '👤 Mon profil' };
 
     const myReviewedBookings = new Set(DB.get('reviews').filter(r => r.userId === user.id).map(r => r.bookingId));
-    const bookingsList = bookings.length
-      ? bookings.map(b => {
-          const statusMap = { en_attente: ['badge-orange','⏳ En attente'], confirme: ['badge-green','✅ Confirmé'], annule: ['badge-red','❌ Annulé'] };
-          const [cls, label] = statusMap[b.statut] || ['badge-gray','–'];
-          const alreadyReviewed = myReviewedBookings.has(b.id);
-          return `
-            <div class="booking-item">
-              ${avatarHtml((b.coachNom||'??').substring(0,2).toUpperCase(), 'linear-gradient(135deg,#1a2e28,#2cc4a8)', 'sm')}
-              <div class="booking-info">
-                <div class="booking-name">${b.coachNom}</div>
-                <div class="booking-detail">${b.serviceLabel} · ${formatDate(b.date)} à ${b.heure}</div>
-                <div class="booking-detail">${b.prix}€ · Paiement sur place</div>
-              </div>
-              <div class="booking-actions">
-                <span class="badge ${cls}">${label}</span>
-                ${b.statut === 'confirme' && !alreadyReviewed ? `<button class="btn btn-secondary btn-sm" onclick="App.openReviewModal('${b.id}')">⭐ Avis</button>` : ''}
-                ${b.statut === 'confirme' && alreadyReviewed ? `<span style="font-size:12px;color:var(--muted)">✅ Avis posté</span>` : ''}
-                ${b.statut === 'en_attente' ? `<button class="btn btn-danger btn-sm" onclick="App.cancelBooking('${b.id}')">Annuler</button>` : ''}
-              </div>
-            </div>`;
-        }).join('')
-      : `<div class="empty"><div class="empty-icon">📅</div><div class="empty-title">Aucune réservation</div><button class="btn btn-primary" onclick="App.go('search')">Trouver un coach</button></div>`;
+    const todayStr = new Date().toISOString().slice(0,10);
+    const getNbP = b => {
+      if ((b.service==='duo')||(b.serviceLabel||'').toLowerCase().includes('duo')) return 2;
+      if ((b.service==='trio')||(b.serviceLabel||'').toLowerCase().includes('trio')) return 3;
+      if ((b.service==='collectif')||(b.serviceLabel||'').toLowerCase().includes('collectif')) return 4;
+      return 1;
+    };
+    const renderBooking = b => {
+      const statusMap = { en_attente: ['badge-orange','⏳ En attente'], confirme: ['badge-green','✅ Confirmé'], annule: ['badge-red','❌ Annulé'] };
+      const [cls, label] = statusMap[b.statut] || ['badge-gray','–'];
+      const alreadyReviewed = myReviewedBookings.has(b.id);
+      const nb = getNbP(b);
+      const prixTotal = (b.prix||0) * nb;
+      const prixLabel = nb > 1 ? `${b.prix}€/pers. · Total ${prixTotal}€` : `${b.prix}€`;
+      return `
+        <div class="booking-item">
+          ${avatarHtml((b.coachNom||'??').substring(0,2).toUpperCase(), 'linear-gradient(135deg,#1a2e28,#2cc4a8)', 'sm')}
+          <div class="booking-info">
+            <div class="booking-name">${b.coachNom}</div>
+            <div class="booking-detail">${b.serviceLabel} · ${formatDate(b.date)} à ${b.heure}</div>
+            <div class="booking-detail">${prixLabel} · Paiement sur place</div>
+          </div>
+          <div class="booking-actions">
+            <span class="badge ${cls}">${label}</span>
+            ${b.statut === 'confirme' && !alreadyReviewed ? `<button class="btn btn-secondary btn-sm" onclick="App.openReviewModal('${b.id}')">⭐ Avis</button>` : ''}
+            ${b.statut === 'confirme' && alreadyReviewed ? `<span style="font-size:12px;color:var(--muted)">✅ Avis posté</span>` : ''}
+            ${b.statut === 'en_attente' ? `<button class="btn btn-danger btn-sm" onclick="App.cancelBooking('${b.id}')">Annuler</button>` : ''}
+          </div>
+        </div>`;
+    };
+    const upcoming = bookings.filter(b => b.date >= todayStr && b.statut !== 'annule');
+    const past = bookings.filter(b => b.date < todayStr || b.statut === 'annule');
+    const bookingsList = bookings.length ? `
+      ${upcoming.length ? `<div style="font-size:13px;font-weight:700;color:#2cc4a8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">À venir</div>${upcoming.map(renderBooking).join('')}` : ''}
+      ${past.length ? `<div style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:20px 0 10px">Passées</div>${past.map(renderBooking).join('')}` : ''}
+    ` : `<div class="empty"><div class="empty-icon">📅</div><div class="empty-title">Aucune réservation</div><button class="btn btn-primary" onclick="App.go('search')">Trouver un coach</button></div>`;
 
     const myReviews = DB.get('reviews').filter(r => r.userId === user.id);
     const coaches = DB.get('coaches');
@@ -3079,7 +3093,7 @@ const App = {
       const getNbPersonnes = b => {
         if (b.service === 'duo' || (b.serviceLabel||'').toLowerCase().includes('duo')) return 2;
         if (b.service === 'trio' || (b.serviceLabel||'').toLowerCase().includes('trio')) return 3;
-        if (b.service === 'collectif' || (b.serviceLabel||'').toLowerCase().includes('collectif')) return 5;
+        if (b.service === 'collectif' || (b.serviceLabel||'').toLowerCase().includes('collectif')) return 4;
         return 1;
       };
       const confirmedAll = bookings.filter(b => b.statut === 'confirme');
@@ -3428,7 +3442,7 @@ const App = {
     const getNbPersonnes = b => {
       if (b.service === 'duo' || (b.serviceLabel||'').toLowerCase().includes('duo')) return 2;
       if (b.service === 'trio' || (b.serviceLabel||'').toLowerCase().includes('trio')) return 3;
-      if (b.service === 'collectif' || (b.serviceLabel||'').toLowerCase().includes('collectif')) return 5;
+      if (b.service === 'collectif' || (b.serviceLabel||'').toLowerCase().includes('collectif')) return 4;
       return 1;
     };
     const confirmedB = bookings.filter(b=>b.statut==='confirme');
@@ -3616,7 +3630,7 @@ const App = {
     const getNbP = b => {
       if (b.service === 'duo' || (b.serviceLabel||'').toLowerCase().includes('duo')) return 2;
       if (b.service === 'trio' || (b.serviceLabel||'').toLowerCase().includes('trio')) return 3;
-      if (b.service === 'collectif' || (b.serviceLabel||'').toLowerCase().includes('collectif')) return 5;
+      if (b.service === 'collectif' || (b.serviceLabel||'').toLowerCase().includes('collectif')) return 4;
       return 1;
     };
     const revenue = confirmedBookings.reduce((s, b) => s + (b.prix||0) * getNbP(b), 0);
