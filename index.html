@@ -2577,6 +2577,9 @@ const App = {
     const coach = coaches.find(c => c.id === this.selectedCoach);
     if (!coach) return '';
 
+    const labelMap = { solo: 'Cours individuel', duo: 'Cours duo', trio: 'Cours trio', collectif: 'Cours collectif' };
+    const prixMap = { solo: coach.tarifs?.solo, duo: coach.tarifs?.duo, trio: coach.tarifs?.trio, collectif: coach.tarifs?.collectif };
+
     const steps = ['Formule', 'Créneau', 'Confirmation'];
     const progressHtml = `
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:28px">
@@ -2658,8 +2661,6 @@ const App = {
 
     // ÉTAPE 3 : Confirmation
     if (this.bookingStep === 3) {
-      const prixMap = { solo: coach.tarifs.solo, duo: coach.tarifs.duo, trio: coach.tarifs.trio, collectif: coach.tarifs.collectif };
-      const labelMap = { solo: 'Cours particulier', duo: 'Cours duo', trio: 'Cours trio', collectif: 'Cours collectif' };
       return `
         <div class="container-sm" style="padding-top:32px;padding-bottom:60px">
           ${progressHtml}
