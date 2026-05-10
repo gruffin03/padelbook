@@ -2828,7 +2828,7 @@ const App = {
               </div>
               <div class="booking-actions">
                 <span class="badge ${cls}">${label}</span>
-                ${b.statut === 'confirme' && !alreadyReviewed ? `<button class="btn btn-secondary btn-sm" onclick="App.openReviewModal('${b.id}','${b.coachId}','${b.coachNom}')">⭐ Avis</button>` : ''}
+                ${b.statut === 'confirme' && !alreadyReviewed ? `<button class="btn btn-secondary btn-sm" onclick="App.openReviewModal('${b.id}')">⭐ Avis</button>` : ''}
                 ${b.statut === 'confirme' && alreadyReviewed ? `<span style="font-size:12px;color:var(--muted)">✅ Avis posté</span>` : ''}
                 ${b.statut === 'en_attente' ? `<button class="btn btn-danger btn-sm" onclick="App.cancelBooking('${b.id}')">Annuler</button>` : ''}
               </div>
@@ -2881,11 +2881,13 @@ const App = {
   _reviewCoachId: null,
   _reviewNote: 0,
 
-  openReviewModal(bookingId, coachId, coachNom) {
+  openReviewModal(bookingId) {
+    const booking = DB.get('bookings').find(b => b.id === bookingId);
+    if (!booking) { toast('❌ Réservation introuvable'); return; }
     this._reviewBookingId = bookingId;
-    this._reviewCoachId = coachId;
+    this._reviewCoachId = booking.coachId;
     this._reviewNote = 0;
-    document.getElementById('review-coach-name').textContent = coachNom;
+    document.getElementById('review-coach-name').textContent = booking.coachNom || 'Coach';
     document.getElementById('review-text').value = '';
     [1,2,3,4,5].forEach(n => document.getElementById('star-'+n).style.opacity = '0.3');
     document.getElementById('review-modal').style.display = 'flex';
