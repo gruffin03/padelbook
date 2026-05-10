@@ -3164,13 +3164,110 @@ const App = {
               </label>`).join('')}
           </div>
         </div>
+        <datalist id="padel-clubs-list">
+          <option value="All In Country Club">
+          <option value="All In Padel Paris">
+          <option value="Padel Factory Paris">
+          <option value="Padel Factory Lyon">
+          <option value="Padel Factory Bordeaux">
+          <option value="Padel Factory Marseille">
+          <option value="Padel Factory Nantes">
+          <option value="Padel Factory Toulouse">
+          <option value="Padel Factory Montpellier">
+          <option value="Padel Factory Strasbourg">
+          <option value="Urban Padel Paris">
+          <option value="Urban Padel Lyon">
+          <option value="Le Parc de Padel Paris">
+          <option value="Le Parc de Padel Bordeaux">
+          <option value="Padel Indoor Paris">
+          <option value="Padel Indoor Lyon">
+          <option value="Padel Indoor Toulouse">
+          <option value="Padel Indoor Nice">
+          <option value="Club de Padel du Bois de Boulogne">
+          <option value="Stade Roland Garros Padel">
+          <option value="Paris Padel Club">
+          <option value="Lyon Padel Club">
+          <option value="Marseille Padel Club">
+          <option value="Nice Padel Club">
+          <option value="Toulouse Padel Club">
+          <option value="Bordeaux Padel Club">
+          <option value="Nantes Padel Club">
+          <option value="Montpellier Padel Club">
+          <option value="Strasbourg Padel Club">
+          <option value="Lille Padel Club">
+          <option value="Rennes Padel Club">
+          <option value="Grenoble Padel Club">
+          <option value="Padel Horizon Lyon">
+          <option value="Padel Horizon Paris">
+          <option value="Padel Avenue Paris">
+          <option value="Padel Avenue Lyon">
+          <option value="Padel Green Paris">
+          <option value="Padel Green Lyon">
+          <option value="Tennis Club de Paris — Padel">
+          <option value="Racing Club de France — Padel">
+          <option value="Stade Français Padel">
+          <option value="PSG Academy Padel">
+          <option value="Club Med Padel">
+          <option value="Décathlon Padel Paris">
+          <option value="Décathlon Padel Lyon">
+          <option value="Décathlon Padel Toulouse">
+          <option value="Padel Rocade Bordeaux">
+          <option value="Padel Sud Montpellier">
+          <option value="Padel Med Nice">
+          <option value="Padel Côte d'Azur">
+          <option value="Padel Marseille La Valentine">
+          <option value="Open Padel Club Toulouse">
+          <option value="Padel Arena Toulouse">
+          <option value="Padel Arena Lyon">
+          <option value="Padel Arena Paris">
+          <option value="Smash Padel Paris">
+          <option value="Smash Padel Lyon">
+          <option value="Padel Opéra Paris">
+          <option value="Padel Nation Paris">
+          <option value="Padel Nation Lyon">
+          <option value="Centro Padel Paris">
+          <option value="Padel Vincennes">
+          <option value="Padel Boulogne">
+          <option value="Padel Neuilly">
+          <option value="Padel Levallois">
+          <option value="Padel Puteaux">
+          <option value="Padel Nanterre">
+          <option value="Padel Versailles">
+          <option value="Padel Saint-Cloud">
+          <option value="Padel Aix-en-Provence">
+          <option value="Padel Cannes">
+          <option value="Padel Toulon">
+          <option value="Padel Perpignan">
+          <option value="Padel Pau">
+          <option value="Padel Biarritz">
+          <option value="Padel Bayonne">
+          <option value="Padel Annecy">
+          <option value="Padel Clermont-Ferrand">
+          <option value="Padel Reims">
+          <option value="Padel Metz">
+          <option value="Padel Nancy">
+          <option value="Padel Rouen">
+          <option value="Padel Le Havre">
+          <option value="Padel Caen">
+          <option value="Padel Rennes Métropole">
+          <option value="Padel Nantes Métropole">
+          <option value="Padel Saint-Étienne">
+          <option value="Padel Dijon">
+          <option value="Padel Orléans">
+          <option value="Padel Tours">
+          <option value="Padel Amiens">
+          <option value="Padel Dunkerque">
+          <option value="Padel Valenciennes">
+          <option value="Padel Mulhouse">
+          <option value="Padel Besançon">
+        </datalist>
         <div class="input-group">
           <label>🏟️ Mes clubs</label>
           <div id="clubs-list" style="margin-bottom:8px">
-            ${(coach.clubs||[]).map((c,i) => `
+            ${(this._editingClubs || coach.clubs||[]).map((c,i) => `
               <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
-                <input class="input-field" style="flex:1" value="${c.nom}" placeholder="Nom du club" oninput="App._clubEdit(${i},'nom',this.value)">
-                <input class="input-field" style="flex:2" value="${c.adresse||''}" placeholder="Adresse" oninput="App._clubEdit(${i},'adresse',this.value)">
+                <input class="input-field" style="flex:1" list="padel-clubs-list" value="${c.nom}" placeholder="Nom du club" oninput="App._clubEdit(${i},'nom',this.value)">
+                <input class="input-field" style="flex:2" value="${c.adresse||''}" placeholder="Adresse (optionnel)" oninput="App._clubEdit(${i},'adresse',this.value)">
                 <button class="btn btn-danger btn-sm" onclick="App._clubRemove(${i})">✕</button>
               </div>`).join('')}
           </div>
