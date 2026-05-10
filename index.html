@@ -1601,7 +1601,7 @@ const App = {
       const dest = user.role === 'admin' ? 'admin' : user.role === 'coach' ? 'coach-dashboard' : 'user-dashboard';
       actionsHtml = '<div class="navbar-user" onclick="App.go(\'' + dest + '\')">'
         + avatarHtml(user.initiales, user.avatarColor || 'linear-gradient(135deg,#5be0c8,#2cc4a8)', 'sm')
-        + '<span>' + (user.prenom || user.nom) + '</span></div>';
+        + '<span>' + [user.prenom, user.nom].filter(Boolean).join(' ') + '</span></div>';
       logoutBtn = '<button class="btn btn-secondary btn-sm" onclick="Auth.logout().then(()=>App.go(\'search\'))">✕</button>';
     } else {
       actionsHtml = '<button class="btn btn-secondary btn-sm" onclick="App.go(\'login\')">Connexion</button>'
@@ -2866,15 +2866,15 @@ const App = {
     if (this.dashTab === 'bookings') {
       content = bookings.length
         ? bookings.map(b => {
-            const users = DB.get('users');
-            const u = users.find(x => x.id === b.userId);
             const statusMap = { en_attente: ['badge-orange','⏳ En attente'], confirme: ['badge-green','✅ Confirmé'], annule: ['badge-red','❌ Annulé'] };
             const [cls, label] = statusMap[b.statut] || ['badge-gray','–'];
+            const joueurNom = b.userNom || 'Joueur';
+            const joueurInitiales = joueurNom.split(' ').map(w=>w[0]||'').join('').toUpperCase().slice(0,2);
             return `
               <div class="booking-item">
-                ${avatarHtml(u ? u.initiales : '?', 'linear-gradient(135deg,#1e40af,#60a5fa)', 'sm')}
+                ${avatarHtml(joueurInitiales || '?', 'linear-gradient(135deg,#1e40af,#60a5fa)', 'sm')}
                 <div class="booking-info">
-                  <div class="booking-name">${u ? `${u.prenom} ${u.nom}` : 'Utilisateur'}</div>
+                  <div class="booking-name">${joueurNom}</div>
                   <div class="booking-detail">${b.serviceLabel} · ${formatDate(b.date)} à ${b.heure}</div>
                   <div class="booking-detail">${b.prix}€ · Paiement sur place</div>
                 </div>
