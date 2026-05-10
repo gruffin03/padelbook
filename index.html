@@ -1280,7 +1280,10 @@ function starsHtml(note, small = false) {
   return `<span class="${cls}">${'★'.repeat(Math.round(note))}${'☆'.repeat(5 - Math.round(note))}</span>`;
 }
 
-function avatarHtml(initiales, color, size = 'md') {
+function avatarHtml(initiales, color, size = 'md', photoUrl = null) {
+  if (photoUrl) {
+    return `<div class="avatar avatar-${size}" style="background:${color||'linear-gradient(135deg,#5be0c8,#2cc4a8)'};overflow:hidden;padding:0"><img src="${photoUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></div>`;
+  }
   const textColor = color && (color.includes('1a472a') || color.includes('1e3a8a') || color.includes('1a1a') || color.includes('#0')) ? '#fff' : 'rgba(0,0,0,0.65)';
   return `<div class="avatar avatar-${size}" style="background:${color||'linear-gradient(135deg,#5be0c8,#2cc4a8)'};color:${textColor}">${initiales}</div>`;
 }
@@ -1602,8 +1605,9 @@ const App = {
       const dest = user.role === 'admin' ? 'admin' : user.role === 'coach' ? 'coach-dashboard' : 'user-dashboard';
       const navInitiales = user.initiales || ((user.prenom?.[0]||'') + (user.nom?.[0]||'')).toUpperCase() || '?';
       const navNom = [user.prenom, user.nom].filter(v => v && v !== 'undefined' && v !== 'null').join(' ') || user.email || '–';
+      const navPhoto = user.avatarUrl || null;
       actionsHtml = '<div class="navbar-user" onclick="App.go(\'' + dest + '\')">'
-        + avatarHtml(navInitiales, user.avatarColor || 'linear-gradient(135deg,#5be0c8,#2cc4a8)', 'sm')
+        + avatarHtml(navInitiales, user.avatarColor || 'linear-gradient(135deg,#5be0c8,#2cc4a8)', 'sm', navPhoto)
         + '<span>' + navNom + '</span></div>';
       logoutBtn = '<button class="btn btn-secondary btn-sm" onclick="Auth.logout().then(()=>App.go(\'search\'))">✕</button>';
     } else {
@@ -2511,7 +2515,7 @@ const App = {
         <div class="container">
           <button class="btn btn-secondary btn-sm" onclick="App.go('search')" style="margin-bottom:20px">← Retour</button>
           <div class="profile-main">
-            ${avatarHtml(coach.initiales, coach.avatarColor, 'lg')}
+            ${avatarHtml(coach.initiales, coach.avatarColor, 'lg', coach.avatarUrl || null)}
             <div class="profile-info">
               <div class="profile-name">${coach.nom}</div>
               <div style="color:#2cc4a8;font-size:14px;margin-top:4px">${coach.specialite}</div>
@@ -2671,7 +2675,7 @@ const App = {
           <p style="color:var(--muted);font-size:13px;margin-bottom:24px">Vérifiez votre réservation</p>
           <div class="card card-green" style="margin-bottom:20px">
             <div style="display:flex;gap:14px;align-items:center;margin-bottom:16px">
-              ${avatarHtml(coach.initiales, coach.avatarColor, 'md')}
+              ${avatarHtml(coach.initiales, coach.avatarColor, 'md', coach.avatarUrl || null)}
               <div>
                 <div style="font-weight:700">${coach.nom}</div>
                 <div style="color:#2cc4a8;font-size:13px">${coach.specialite}</div>
@@ -2785,8 +2789,8 @@ const App = {
     const user = Auth.currentUser;
     const bookings = DB.get('bookings').filter(b => b.userId === user.id).sort((a,b) => b.createdAt.localeCompare(a.createdAt));
 
-    const tabs = ['bookings', 'reviews'];
-    const tabLabels = { bookings: '📅 Réservations', reviews: '⭐ Mes avis' };
+    const tabs = ['bookings', 'reviews', 'profil'];
+    const tabLabels = { bookings: '📅 Réservations', reviews: '⭐ Mes avis', profil: '👤 Mon profil' };
 
     const bookingsList = bookings.length
       ? bookings.map(b => {
@@ -2824,9 +2828,9 @@ const App = {
       <div class="dashboard-header">
         <div class="container">
           <div style="display:flex;gap:16px;align-items:center">
-            ${avatarHtml(user.initiales, user.avatarColor, 'lg')}
+            ${avatarHtml(user.initiales || ((user.prenom?.[0]||'')+(user.nom?.[0]||'')).toUpperCase(), user.avatarColor, 'lg', user.avatarUrl || null)}
             <div>
-              <div class="title-lg">${user.prenom} ${user.nom}</div>
+              <div class="title-lg">${[user.prenom,user.nom].filter(v=>v&&v!=='undefined').join(' ')}</div>
               <div style="color:var(--muted);font-size:13px">${user.email}</div>
               <span class="badge badge-blue" style="margin-top:6px">Élève</span>
             </div>
@@ -2837,7 +2841,15 @@ const App = {
         <div class="tabs">
           ${tabs.map(t => `<div class="tab ${this.dashTab===t?'active':''}" onclick="App.dashTab='${t}';App.render()">${tabLabels[t]}</div>`).join('')}
         </div>
-        ${this.dashTab === 'bookings' ? bookingsList : reviewsList}
+        ${this.dashTab === 'bookings' ? bookingsList : this.dashTab === 'reviews' ? reviewsList : `
+          <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:24px;background:var(--card);border-radius:16px;border:1px solid var(--border)">
+            ${avatarHtml(user.initiales || ((user.prenom?.[0]||'')+(user.nom?.[0]||'')).toUpperCase() || '?', user.avatarColor || 'linear-gradient(135deg,#1e40af,#60a5fa)', 'lg', user.avatarUrl || null)}
+            <label style="cursor:pointer">
+              <span class="btn btn-secondary btn-sm">📷 Changer la photo</span>
+              <input type="file" accept="image/*" style="display:none" onchange="App.uploadAvatar(this)">
+            </label>
+            <p style="font-size:12px;color:var(--muted);margin:0">JPG ou PNG · max 2 Mo</p>
+          </div>`}
       </div>`;
   },
 
@@ -2938,7 +2950,17 @@ const App = {
     }
 
     if (this.dashTab === 'profil') {
+      const photoUrl = Auth.currentUser.avatarUrl || coach.avatarUrl || null;
+      const initiales = coach.initiales || coach.nom.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
       content = `
+        <div style="display:flex;flex-direction:column;align-items:center;gap:12px;margin-bottom:24px;padding:20px;background:var(--card);border-radius:16px;border:1px solid var(--border)">
+          ${avatarHtml(initiales, coach.avatarColor || 'linear-gradient(135deg,#1a2e28,#2cc4a8)', 'lg', photoUrl)}
+          <label style="cursor:pointer">
+            <span class="btn btn-secondary btn-sm">📷 Changer la photo</span>
+            <input type="file" accept="image/*" style="display:none" onchange="App.uploadAvatar(this)">
+          </label>
+          <p style="font-size:12px;color:var(--muted);margin:0">JPG ou PNG · max 2 Mo</p>
+        </div>
         <div class="input-group"><label>Nom complet</label><input class="input-field" id="c-nom" value="${coach.nom}" placeholder="Prénom Nom"></div>
         <div class="input-group"><label>Spécialité</label><input class="input-field" id="c-spec" value="${coach.specialite}" placeholder="Ex: Moniteur Fédéral FFT"></div>
         <div class="input-group"><label>Ville</label><input class="input-field" id="c-ville" value="${coach.ville}" placeholder="Lyon"></div>
@@ -3014,7 +3036,7 @@ const App = {
       <div class="dashboard-header">
         <div class="container">
           <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
-            ${avatarHtml(coach.initiales, coach.avatarColor, 'lg')}
+            ${avatarHtml(coach.initiales, coach.avatarColor, 'lg', coach.avatarUrl || null)}
             <div style="flex:1">
               <div class="title-lg">${coach.nom}</div>
               <div style="color:#2cc4a8;font-size:13px">${coach.specialite || 'Coach Padel'}</div>
@@ -3070,6 +3092,29 @@ const App = {
     this.render();
   },
 
+  async uploadAvatar(inputEl) {
+    const file = inputEl.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { toast('❌ Image trop grande (max 2 Mo)'); return; }
+    const userId = Auth.currentUser.id;
+    const ext = file.name.split('.').pop();
+    const path = `${userId}/avatar.${ext}`;
+    toast('⏳ Upload en cours…');
+    const { error } = await sb.storage.from('avatars').upload(path, file, { upsert: true });
+    if (error) { toast('❌ Erreur upload : ' + error.message); return; }
+    const { data: { publicUrl } } = sb.storage.from('avatars').getPublicUrl(path);
+    await sb.from('profiles').update({ avatar_url: publicUrl }).eq('id', userId);
+    Auth.currentUser.avatarUrl = publicUrl;
+    // Si coach, mettre à jour aussi la fiche coach
+    if (Auth.currentUser.coachId) {
+      await sb.from('coaches').update({ avatar_url: publicUrl }).eq('id', Auth.currentUser.coachId);
+      const coach = DB.get('coaches').find(c => c.id === Auth.currentUser.coachId);
+      if (coach) coach.avatarUrl = publicUrl;
+    }
+    toast('✅ Photo mise à jour !');
+    this.render();
+  },
+
   changePlan(coachId, plan) {
     const expiry = new Date();
     expiry.setMonth(expiry.getMonth() + (plan === 'decouverte' ? 1 : 6));
@@ -3121,7 +3166,7 @@ const App = {
         <div class="container">
           <button class="btn btn-secondary btn-sm" onclick="App.go('admin')" style="margin-bottom:16px">← Retour admin</button>
           <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
-            ${avatarHtml(coach.initiales, coach.avatarColor, 'lg')}
+            ${avatarHtml(coach.initiales, coach.avatarColor, 'lg', coach.avatarUrl || null)}
             <div style="flex:1">
               <div class="title-lg">${coach.nom}</div>
               <div style="color:#2cc4a8;font-size:13px">${coach.specialite||'–'}</div>
