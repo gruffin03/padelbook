@@ -1650,12 +1650,14 @@ const App = {
       actionsHtml = '<button class="btn btn-secondary btn-sm" onclick="App.go(\'login\')">Connexion</button>'
         + '<button class="btn btn-primary btn-sm" onclick="App.go(\'register\')">Inscription</button>';
     }
+    const logoDest = user?.role === 'coach' ? 'coach-dashboard' : user?.role === 'admin' ? 'admin' : 'search';
+    const extraBtn = !user ? '<button class="btn btn-secondary btn-sm" onclick="App.go(\'search\')">Voir les coachs</button>' : '';
     return '<nav class="navbar"><div class="navbar-inner">'
-      + '<div class="navbar-logo" onclick="App.go(\'search\')">'
+      + '<div class="navbar-logo" onclick="App.go(\'' + logoDest + '\')">'
       + '<div class="navbar-logo-icon">🎾</div>'
       + '<span style="font-family:Fraunces,serif;font-size:18px;font-weight:900;color:#1a2e28">Padel<span style="color:#2cc4a8">Book</span></span>'
       + '</div>'
-      + '<div class="navbar-actions">' + (user ? '' : '<button class="btn btn-secondary btn-sm" onclick="App.go(\'search\')">Voir les coachs</button>') + actionsHtml + logoutBtn + '</div>'
+      + '<div class="navbar-actions">' + extraBtn + actionsHtml + logoutBtn + '</div>'
       + '</div></nav>';
   },
 
