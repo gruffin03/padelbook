@@ -1656,7 +1656,7 @@ const App = {
       actionsHtml = '<button class="btn btn-secondary btn-sm" onclick="App.go(\'login\')">Connexion</button>'
         + '<button class="btn btn-primary btn-sm" onclick="App.go(\'register\')">Inscription</button>';
     }
-    const logoDest = user?.role === 'coach' ? 'coach-dashboard' : user?.role === 'admin' ? 'admin' : 'search';
+    const logoDest = user?.role === 'coach' ? 'coach-dashboard' : user?.role === 'admin' ? 'admin' : user ? 'search' : 'home';
     const extraBtn = !user ? '<button class="btn btn-secondary btn-sm" onclick="App.go(\'search\')">Voir les coachs</button>' : '';
     return '<nav class="navbar"><div class="navbar-inner">'
       + '<div class="navbar-logo" onclick="App.go(\'' + logoDest + '\')">'
@@ -3097,6 +3097,15 @@ const App = {
       content = `
         <div style="padding:8px 0 20px">
           <div style="font-size:18px;font-weight:800;color:#0d2a22;margin-bottom:16px">Bonjour ${coach.nom} 👋</div>
+          ${(coach.plan||'decouverte')==='decouverte' ? `
+          <div onclick="App.dashTab='abonnement';App.render()" style="cursor:pointer;background:linear-gradient(135deg,#7c5c0a,#d4a843);border-radius:14px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:14px">
+            <span style="font-size:28px">⭐</span>
+            <div style="flex:1">
+              <div style="font-weight:800;color:white;font-size:15px">Passez à la formule Essentiel</div>
+              <div style="color:rgba(255,255,255,0.8);font-size:13px;margin-top:2px">Réservations illimitées · Profil complet · 9€/mois</div>
+            </div>
+            <div style="color:white;font-size:20px">→</div>
+          </div>` : ''}
           <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:24px">
             ${statCard('💰', 'Revenu ce mois', revenuMois + '€', 'cours confirmés')}
             ${statCard('📅', 'Réservations confirmées', confirmedAll.length, 'total')}
@@ -3432,6 +3441,7 @@ const App = {
                 ${coach.validated ? `<span class="badge badge-green">✅ Profil validé</span>` : `<span class="badge badge-orange">⏳ En attente validation</span>`}
                 <span class="badge badge-gray">📅 ${bookings.filter(b=>b.statut==='confirme').length} cours confirmés</span>
                 <span class="badge badge-blue">💰 ${totalRevenu}€ générés</span>
+                ${(coach.plan||'decouverte')==='decouverte' ? `<span class="badge badge-orange" style="cursor:pointer" onclick="App.dashTab='abonnement';App.render()">🆓 Formule Découverte — Passer Pro →</span>` : ''}
               </div>
             </div>
           </div>
