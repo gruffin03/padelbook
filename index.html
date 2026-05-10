@@ -3699,6 +3699,13 @@ async function sendEmail({ to, subject, html }) {
   await Auth.restore();
   await DB.init();
   requestNotifPermission();
+  // Rediriger vers le bon tableau de bord si connecté
+  if (Auth.currentUser) {
+    const role = Auth.currentUser.role;
+    if (role === 'admin') App.view = 'admin';
+    else if (role === 'coach') App.view = 'coach-dashboard';
+    else App.view = 'search';
+  }
   App.render();
 })();
 
