@@ -2587,16 +2587,17 @@ const App = {
     // ÉTAPE 1 : Choix de la formule
     if (this.bookingStep === 1) {
       const services = [
-        { key: 'solo', label: 'Cours particulier', desc: '1 joueur', icon: '🎯', prix: coach.tarifs.solo },
-        { key: 'duo', label: 'Cours duo', desc: '2 joueurs', icon: '👥', prix: coach.tarifs.duo },
-        { key: 'trio', label: 'Cours trio', desc: '3 joueurs', icon: '🏆', prix: coach.tarifs.trio },
-        { key: 'collectif', label: 'Cours collectif', desc: '4-6 joueurs', icon: '🌟', prix: coach.tarifs.collectif },
+        { key: 'solo', label: 'Cours individuel', desc: 'Vous seul avec le coach · 1 personne', icon: '🎯', prix: coach.tarifs.solo },
+        { key: 'duo', label: 'Cours duo', desc: 'Vous + 1 ami · 2 personnes', icon: '👥', prix: coach.tarifs.duo },
+        { key: 'trio', label: 'Cours trio', desc: 'Vous + 2 amis · 3 personnes', icon: '🏆', prix: coach.tarifs.trio },
+        { key: 'collectif', label: 'Cours collectif', desc: 'Groupe de 4 à 6 personnes', icon: '🌟', prix: coach.tarifs.collectif },
       ];
+      const nextStep = (this.selectedDate && this.selectedSlot) ? 3 : 2;
       return `
         <div class="container-sm" style="padding-top:32px;padding-bottom:60px">
           ${progressHtml}
-          <div class="title-lg" style="margin-bottom:6px">Choisissez votre formule</div>
-          <p style="color:var(--muted);font-size:13px;margin-bottom:24px">Cours avec ${coach.nom} · 60 min</p>
+          <div class="title-lg" style="margin-bottom:6px">Combien de joueurs ?</div>
+          <p style="color:var(--muted);font-size:13px;margin-bottom:24px">Cours avec ${coach.nom} · 60 min${this.selectedDate && this.selectedSlot ? ` · ${this.selectedDate} à ${this.selectedSlot}` : ''}</p>
           ${services.map(s => `
             <div class="coach-card ${this.selectedService===s.key ? 'card-green' : ''}"
               style="margin-bottom:10px;display:flex;align-items:center;gap:14px"
@@ -2610,7 +2611,7 @@ const App = {
             </div>`).join('')}
           <div style="display:flex;gap:10px;margin-top:20px">
             <button class="btn btn-secondary" onclick="App.go('profile',{selectedCoach:'${coach.id}'})">← Retour</button>
-            <button class="btn btn-primary" style="flex:1" onclick="App.bookingStep=2;App.selectedDate=null;App.selectedSlot=null;App.render()">Continuer →</button>
+            <button class="btn btn-primary" style="flex:1" onclick="App.bookingStep=${nextStep};App.render()">Continuer →</button>
           </div>
         </div>`;
     }
