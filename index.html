@@ -1602,7 +1602,7 @@ const App = {
       const dest = user.role === 'admin' ? 'admin' : user.role === 'coach' ? 'coach-dashboard' : 'user-dashboard';
       actionsHtml = '<div class="navbar-user" onclick="App.go(\'' + dest + '\')">'
         + avatarHtml(user.initiales, user.avatarColor || 'linear-gradient(135deg,#5be0c8,#2cc4a8)', 'sm')
-        + '<span>' + [user.prenom, user.nom].filter(Boolean).join(' ') + '</span></div>';
+        + '<span>' + [user.prenom, user.nom].filter(v => v && v !== 'undefined' && v !== 'null').join(' ') + '</span></div>';
       logoutBtn = '<button class="btn btn-secondary btn-sm" onclick="Auth.logout().then(()=>App.go(\'search\'))">✕</button>';
     } else {
       actionsHtml = '<button class="btn btn-secondary btn-sm" onclick="App.go(\'login\')">Connexion</button>'
