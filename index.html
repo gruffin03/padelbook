@@ -1029,20 +1029,24 @@ select.input-field { cursor: pointer; }
 <div id="review-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;padding:20px">
   <div style="background:white;border-radius:20px;padding:28px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,0.2)">
     <div style="font-size:20px;font-weight:800;margin-bottom:4px">⭐ Laisser un avis</div>
-    <div id="review-coach-name" style="color:var(--muted);font-size:14px;margin-bottom:20px"></div>
+    <div id="review-coach-name" style="color:#6b7280;font-size:14px;margin-bottom:20px"></div>
     <div style="margin-bottom:16px">
       <label style="font-size:13px;font-weight:600;display:block;margin-bottom:8px">Note</label>
-      <div style="display:flex;gap:8px">
-        ${[1,2,3,4,5].map(n => `<button onclick="App.setReviewNote(${n})" id="star-${n}" style="font-size:28px;background:none;border:none;cursor:pointer;opacity:0.3;transition:opacity 0.15s">★</button>`).join('')}
+      <div style="display:flex;gap:4px">
+        <button id="star-1" onclick="App.setReviewNote(1)" style="font-size:32px;background:none;border:none;cursor:pointer;opacity:0.25;transition:opacity 0.15s;padding:0">★</button>
+        <button id="star-2" onclick="App.setReviewNote(2)" style="font-size:32px;background:none;border:none;cursor:pointer;opacity:0.25;transition:opacity 0.15s;padding:0">★</button>
+        <button id="star-3" onclick="App.setReviewNote(3)" style="font-size:32px;background:none;border:none;cursor:pointer;opacity:0.25;transition:opacity 0.15s;padding:0">★</button>
+        <button id="star-4" onclick="App.setReviewNote(4)" style="font-size:32px;background:none;border:none;cursor:pointer;opacity:0.25;transition:opacity 0.15s;padding:0">★</button>
+        <button id="star-5" onclick="App.setReviewNote(5)" style="font-size:32px;background:none;border:none;cursor:pointer;opacity:0.25;transition:opacity 0.15s;padding:0">★</button>
       </div>
     </div>
-    <div class="input-group">
-      <label>Commentaire</label>
-      <textarea id="review-text" class="input-field" rows="4" placeholder="Décrivez votre expérience avec ce coach…"></textarea>
+    <div style="margin-bottom:16px">
+      <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px">Commentaire</label>
+      <textarea id="review-text" style="width:100%;border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px;font-size:14px;font-family:inherit;resize:vertical;outline:none" rows="4" placeholder="Décrivez votre expérience avec ce coach…"></textarea>
     </div>
-    <div style="display:flex;gap:10px;margin-top:8px">
+    <div style="display:flex;gap:10px">
       <button class="btn btn-secondary" style="flex:1" onclick="App.closeReviewModal()">Annuler</button>
-      <button class="btn btn-primary" style="flex:1" onclick="App.submitReview()">✓ Publier l'avis</button>
+      <button class="btn btn-primary" style="flex:1" onclick="App.submitReview()">✓ Publier</button>
     </div>
   </div>
 </div>
