@@ -3713,7 +3713,7 @@ async function sendEmail({ to, subject, html }) {
 // BOOT
 // ============================================================
 (async function init() {
-  // Redirection immédiate depuis localStorage (avant même que Supabase réponde)
+  // Redirection immédiate depuis localStorage
   const cachedRole = localStorage.getItem('pb_role');
   if (cachedRole === 'coach') App.view = 'coach-dashboard';
   else if (cachedRole === 'admin') App.view = 'admin';
@@ -3734,10 +3734,11 @@ async function sendEmail({ to, subject, html }) {
       else if (role === 'coach') App.view = 'coach-dashboard';
       else App.view = 'search';
     }
-  } else {
-    localStorage.removeItem('pb_role');
+  } else if (!cachedRole) {
+    // Pas de session ET pas de cache → page d'accueil
     App.view = 'home';
   }
+  // Si cachedRole existe mais session pas encore chargée → onAuthStateChange s'en occupe
   App.render();
 })();
 
