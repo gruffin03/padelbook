@@ -2904,14 +2904,42 @@ const App = {
           ${tabs.map(t => `<div class="tab ${this.dashTab===t?'active':''}" onclick="App.dashTab='${t}';App.render()">${tabLabels[t]}</div>`).join('')}
         </div>
         ${this.dashTab === 'bookings' ? bookingsList : this.dashTab === 'reviews' ? reviewsList : `
-          <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:24px;background:var(--card);border-radius:16px;border:1px solid var(--border)">
+          <!-- PHOTO -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:24px;background:var(--card);border-radius:16px;border:1px solid var(--border);margin-bottom:16px">
             ${avatarHtml(user.initiales || ((user.prenom?.[0]||'')+(user.nom?.[0]||'')).toUpperCase() || '?', user.avatarColor || 'linear-gradient(135deg,#1e40af,#60a5fa)', 'lg', user.avatarUrl || null)}
             <label style="cursor:pointer">
               <span class="btn btn-secondary btn-sm">📷 Changer la photo</span>
               <input type="file" accept="image/*" style="display:none" onchange="App.uploadAvatar(this)">
             </label>
             <p style="font-size:12px;color:var(--muted);margin:0">JPG ou PNG · max 2 Mo</p>
-          </div>`}
+          </div>
+          <!-- INFOS JOUEUR -->
+          <div class="input-group"><label>Prénom</label><input class="input-field" id="u-prenom" value="${user.prenom||''}" placeholder="Votre prénom"></div>
+          <div class="input-group"><label>Nom</label><input class="input-field" id="u-nom" value="${user.nom||''}" placeholder="Votre nom"></div>
+          <div class="input-group"><label>Âge</label><input class="input-field" type="number" id="u-age" value="${user.age||''}" placeholder="Ex: 32" min="10" max="99"></div>
+          <div class="input-group">
+            <label>Classement FFT</label>
+            <select class="input-field" id="u-classement">
+              ${['','NC','P25','P100','P250','P500','P1000','P1500','P2000'].map(v => `<option value="${v}" ${(user.classement||'')=== v?'selected':''}>${v||'Non classé'}</option>`).join('')}
+            </select>
+          </div>
+          <div class="input-group">
+            <label>Niveau de jeu</label>
+            <select class="input-field" id="u-niveau">
+              ${['','Débutant','Intermédiaire','Avancé','Compétiteur'].map(v => `<option value="${v}" ${(user.niveau||'')=== v?'selected':''}>${v||'Non renseigné'}</option>`).join('')}
+            </select>
+          </div>
+          <div class="input-group">
+            <label>Objectif</label>
+            <select class="input-field" id="u-objectif">
+              ${['','Progresser en loisir','Atteindre le niveau compétition','Préparer un tournoi','Reprendre le sport','Découvrir le padel'].map(v => `<option value="${v}" ${(user.objectif||'')=== v?'selected':''}>${v||'Non renseigné'}</option>`).join('')}
+            </select>
+          </div>
+          <div class="input-group">
+            <label>🏆 Palmarès</label>
+            <textarea class="input-field" id="u-palmares" rows="3" placeholder="Ex: Vainqueur P25 Lyon 2024, demi-finale Open Bordeaux…">${user.palmares||''}</textarea>
+          </div>
+          <button class="btn btn-primary btn-full" onclick="App.saveUserProfile()">💾 Enregistrer</button>`}
       </div>`;
   },
 
@@ -3431,6 +3459,20 @@ const App = {
       this._editingClubs = [...(coach.clubs || [])];
     }
     this._editingClubs[i][field] = val;
+  },
+
+  saveUserProfile() {
+    const prenom   = document.getElementById('u-prenom')?.value?.trim();
+    const nom      = document.getElementById('u-nom')?.value?.trim();
+    const age      = parseInt(document.getElementById('u-age')?.value) || null;
+    const classement = document.getElementById('u-classement')?.value || '';
+    const niveau   = document.getElementById('u-niveau')?.value || '';
+    const objectif = document.getElementById('u-objectif')?.value || '';
+    const palmares = document.getElementById('u-palmares')?.value?.trim() || '';
+    DB.update('profiles', Auth.currentUser.id, { prenom, nom, age, classement, niveau, objectif, palmares });
+    Object.assign(Auth.currentUser, { prenom, nom, age, classement, niveau, objectif, palmares });
+    toast('✅ Profil enregistré');
+    this.render();
   },
 
   saveCoachProfile(coachId) {
