@@ -3134,7 +3134,9 @@ const App = {
 
     const nbPersonnes = { solo:1, duo:2, trio:3, collectif:5 };
     const getLabelNb = l => l&&l.toLowerCase().includes('duo')?2:l&&l.toLowerCase().includes('trio')?3:l&&l.toLowerCase().includes('collectif')?5:1;
-    const totalRevenu = bookings.filter(b=>b.statut==='confirme').reduce((s,b)=>s+(b.prix||0)*(nbPersonnes[b.service]||getLabelNb(b.serviceLabel)),0);
+    const confirmedB = bookings.filter(b=>b.statut==='confirme');
+    console.log('confirmed bookings:', confirmedB.map(b=>({service:b.service,serviceLabel:b.serviceLabel,prix:b.prix,statut:b.statut})));
+    const totalRevenu = confirmedB.reduce((s,b)=>{ const n=nbPersonnes[b.service]||getLabelNb(b.serviceLabel); console.log('booking:',b.service,b.prix,'x',n,'=',b.prix*n); return s+(b.prix||0)*n; },0);
 
     return `
       <div class="dashboard-header">
