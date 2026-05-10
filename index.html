@@ -2734,39 +2734,43 @@ const App = {
     const coaches = DB.get('coaches');
     const coach = coaches.find(c => c.id === this.selectedCoach);
     const prixMap = { solo: coach.tarifs.solo, duo: coach.tarifs.duo, trio: coach.tarifs.trio, collectif: coach.tarifs.collectif };
-    const labelMap = { solo: 'Cours particulier', duo: 'Cours duo', trio: 'Cours trio', collectif: 'Cours collectif' };
+    const labelMap = { solo: 'Cours individuel', duo: 'Cours duo', trio: 'Cours trio', collectif: 'Cours collectif' };
 
-    const booking = await DB.insert('bookings', {
-      userId: Auth.currentUser.id,
-      coachId: this.selectedCoach,
-      coachNom: coach.nom,
-      coachVille: coach.ville,
-      userNom: `${Auth.currentUser.prenom} ${Auth.currentUser.nom}`,
-      service: this.selectedService,
-      serviceLabel: labelMap[this.selectedService],
-      date: this.selectedDate,
-      heure: this.selectedSlot,
-      prix: prixMap[this.selectedService],
-      statut: 'en_attente',
-    });
+    try {
+      const booking = await DB.insert('bookings', {
+        userId: Auth.currentUser.id,
+        coachId: this.selectedCoach,
+        coachNom: coach.nom,
+        coachVille: coach.ville,
+        userNom: `${Auth.currentUser.prenom} ${Auth.currentUser.nom}`,
+        service: this.selectedService,
+        serviceLabel: labelMap[this.selectedService],
+        date: this.selectedDate,
+        heure: this.selectedSlot,
+        prix: prixMap[this.selectedService],
+        statut: 'en_attente',
+      });
 
-    sendBrowserNotif(
-      '🎾 Nouvelle réservation !',
-      `${Auth.currentUser.prenom} ${Auth.currentUser.nom} a réservé un ${labelMap[this.selectedService]} le ${formatDate(this.selectedDate)} à ${this.selectedSlot}`
-    );
+      sendBrowserNotif(
+        '🎾 Nouvelle réservation !',
+        `${Auth.currentUser.prenom} ${Auth.currentUser.nom} a réservé un ${labelMap[this.selectedService]} le ${formatDate(this.selectedDate)} à ${this.selectedSlot}`
+      );
 
-    // Email au coach via Netlify Function
-    sendEmail({
-      to: coach.email || '',
-      subject: '🎾 Nouvelle réservation PadelBook',
-      html: `<h2>Nouvelle réservation !</h2>
-        <p><strong>${booking.userNom}</strong> a réservé un <strong>${booking.serviceLabel}</strong>
-        le ${booking.date} à ${booking.heure}.</p>
-        <p>Connectez-vous sur PadelBook pour confirmer ou refuser.</p>`
-    }).catch(() => {});
+      sendEmail({
+        to: coach.email || '',
+        subject: '🎾 Nouvelle réservation PadelBook',
+        html: `<h2>Nouvelle réservation !</h2>
+          <p><strong>${booking.userNom}</strong> a réservé un <strong>${booking.serviceLabel}</strong>
+          le ${booking.date} à ${booking.heure}.</p>
+          <p>Connectez-vous sur PadelBook pour confirmer ou refuser.</p>`
+      }).catch(() => {});
 
-    this.bookingStep = 4;
-    this.render();
+      this.bookingStep = 4;
+      this.render();
+    } catch(e) {
+      console.error('confirmBooking error:', e);
+      toast(`❌ Erreur : ${e.message || 'Impossible de confirmer la réservation'}`, 'error');
+    }
   },
 
   // ===========================================================
