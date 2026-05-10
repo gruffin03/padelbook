@@ -14,7 +14,7 @@ exports.handler = async (event) => {
 
   try {
     await resend.emails.send({
-      from: 'PadelBook <noreply@padelbook.fr>',
+      from: 'PadelBook <onboarding@resend.dev>',
       to,
       subject,
       html
