@@ -1673,6 +1673,15 @@ const App = {
   // ===========================================================
 
   viewHome() {
+    if (Auth.currentUser) {
+      const role = Auth.currentUser.role;
+      setTimeout(() => {
+        if (role === 'admin') App.go('admin');
+        else if (role === 'coach') App.go('coach-dashboard');
+        else App.go('search');
+      }, 0);
+      return '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-size:14px;color:#8888aa">Chargement…</div>';
+    }
     return `
     <!-- HERO -->
     <div class="lp-hero">
