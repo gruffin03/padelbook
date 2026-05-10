@@ -1708,7 +1708,7 @@ const App = {
             style="padding:12px 28px;border-radius:40px;font-size:14px;font-weight:800;cursor:pointer;transition:all 0.2s;background:#0d2a22;color:white;box-shadow:0 4px 14px rgba(13,42,34,0.25)">
             🎾 Je suis Joueur
           </div>
-          <div onclick="App.go('home-coach')"
+          <div onclick="App.go('register')"
             style="padding:12px 28px;border-radius:40px;font-size:14px;font-weight:800;cursor:pointer;transition:all 0.2s;color:#4a6a60">
             🏆 Je suis Coach
           </div>
@@ -2135,6 +2135,11 @@ const App = {
 
 
   viewHomeCoach() {
+    // Redirect logged-in coaches to their dashboard
+    if (Auth.currentUser && Auth.currentUser.role === 'coach') {
+      setTimeout(() => App.go('coach-dashboard'), 0);
+      return '<div style="display:flex;align-items:center;justify-content:center;height:60vh"><div style="color:#6b7280">Redirection…</div></div>';
+    }
     return `
     <!-- HERO COACH -->
     <div class="lp-hero" style="padding-bottom:60px">
@@ -2975,10 +2980,80 @@ const App = {
 
     const bookings = DB.get('bookings').filter(b => b.coachId === coach.id).sort((a,b) => b.createdAt.localeCompare(a.createdAt));
     const pending = bookings.filter(b => b.statut === 'en_attente');
-    const tabs = ['bookings', 'dispos', 'profil', 'tarifs', 'abonnement'];
-    const tabLabels = { bookings: `📅 Réservations ${pending.length?`(${pending.length})`:''}`, dispos: '📆 Disponibilités', profil: '👤 Mon profil', tarifs: '💰 Tarifs', abonnement: '💳 Abonnement' };
+    const tabs = ['stats', 'bookings', 'dispos', 'profil', 'tarifs', 'abonnement'];
+    const tabLabels = { stats: '📊 Tableau de bord', bookings: `📅 Réservations ${pending.length?`(${pending.length})`:''}`, dispos: '📆 Disponibilités', profil: '👤 Mon profil', tarifs: '💰 Tarifs', abonnement: '💳 Abonnement' };
+    if (!this.dashTab || this.dashTab === 'home') this.dashTab = 'stats';
 
     let content = '';
+
+    if (this.dashTab === 'stats') {
+      const now = new Date();
+      const monthStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+      const getNbPersonnes = b => {
+        if (b.service === 'duo' || (b.serviceLabel||'').toLowerCase().includes('duo')) return 2;
+        if (b.service === 'trio' || (b.serviceLabel||'').toLowerCase().includes('trio')) return 3;
+        if (b.service === 'collectif' || (b.serviceLabel||'').toLowerCase().includes('collectif')) return 5;
+        return 1;
+      };
+      const confirmedAll = bookings.filter(b => b.statut === 'confirme');
+      const confirmedMonth = confirmedAll.filter(b => (b.date||'').startsWith(monthStr));
+      const revenuMois = confirmedMonth.reduce((s,b) => s + (b.prix||0) * getNbPersonnes(b), 0);
+      const revenuTotal = confirmedAll.reduce((s,b) => s + (b.prix||0) * getNbPersonnes(b), 0);
+      const reviews = DB.get('reviews').filter(r => r.coachId === coach.id);
+      const avgNote = reviews.length ? (reviews.reduce((s,r) => s+r.note, 0) / reviews.length).toFixed(1) : null;
+      const todayStr = dateStr(now);
+      const upcoming = confirmedAll.filter(b => b.date >= todayStr).sort((a,b) => a.date.localeCompare(b.date) || a.heure.localeCompare(b.heure)).slice(0, 5);
+
+      const statCard = (icon, label, value, sub) => `
+        <div style="background:white;border-radius:16px;padding:20px 24px;box-shadow:0 2px 12px rgba(0,0,0,0.06);flex:1;min-width:140px">
+          <div style="font-size:26px;margin-bottom:6px">${icon}</div>
+          <div style="font-size:26px;font-weight:800;color:#0d2a22">${value}</div>
+          <div style="font-size:13px;font-weight:600;color:#374151;margin-top:2px">${label}</div>
+          ${sub ? `<div style="font-size:11px;color:#9ca3af;margin-top:2px">${sub}</div>` : ''}
+        </div>`;
+
+      content = `
+        <div style="padding:8px 0 20px">
+          <div style="font-size:18px;font-weight:800;color:#0d2a22;margin-bottom:16px">Bonjour ${coach.nom} 👋</div>
+          <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:24px">
+            ${statCard('💰', 'Revenu ce mois', revenuMois + '€', 'cours confirmés')}
+            ${statCard('📅', 'Réservations confirmées', confirmedAll.length, 'total')}
+            ${statCard('⭐', 'Note moyenne', avgNote ? avgNote + '/5' : '–', reviews.length ? reviews.length + ' avis' : 'aucun avis')}
+            ${statCard('🔔', 'En attente', pending.length, 'à confirmer')}
+          </div>
+
+          <div style="font-size:15px;font-weight:700;color:#0d2a22;margin-bottom:12px">Prochains cours</div>
+          ${upcoming.length ? upcoming.map(b => `
+            <div style="background:white;border-radius:12px;padding:14px 16px;margin-bottom:8px;box-shadow:0 2px 8px rgba(0,0,0,0.05);display:flex;align-items:center;gap:12px">
+              <div style="background:linear-gradient(135deg,#5be0c8,#2cc4a8);color:white;border-radius:10px;padding:8px 12px;text-align:center;min-width:48px">
+                <div style="font-size:11px;font-weight:700">${formatDate(b.date).split(' ')[0]}</div>
+                <div style="font-size:16px;font-weight:800">${formatDate(b.date).split(' ')[1]||''}</div>
+              </div>
+              <div style="flex:1">
+                <div style="font-weight:700;font-size:14px;color:#0d2a22">${b.userNom||'Joueur'}</div>
+                <div style="font-size:12px;color:#6b7280">${b.serviceLabel||b.service||'Cours'} · ${b.heure}</div>
+              </div>
+              <div style="font-size:14px;font-weight:700;color:#2cc4a8">${b.prix}€</div>
+            </div>`).join('')
+          : `<div class="empty"><div class="empty-icon">📅</div><div class="empty-title">Aucun cours à venir</div></div>`}
+
+          ${pending.length ? `
+          <div style="margin-top:20px">
+            <div style="font-size:15px;font-weight:700;color:#0d2a22;margin-bottom:12px">En attente de confirmation</div>
+            ${pending.map(b => `
+              <div style="background:#fffbeb;border:1.5px solid #fcd34d;border-radius:12px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                <div style="flex:1">
+                  <div style="font-weight:700;font-size:14px;color:#0d2a22">${b.userNom||'Joueur'}</div>
+                  <div style="font-size:12px;color:#6b7280">${b.serviceLabel||b.service||'Cours'} · ${formatDate(b.date)} à ${b.heure}</div>
+                </div>
+                <div style="display:flex;gap:6px">
+                  <button class="btn btn-primary btn-sm" onclick="App.updateBooking('${b.id}','confirme')">✓ Accepter</button>
+                  <button class="btn btn-danger btn-sm" onclick="App.updateBooking('${b.id}','annule')">✗ Refuser</button>
+                </div>
+              </div>`).join('')}
+          </div>` : ''}
+        </div>`;
+    }
 
     if (this.dashTab === 'bookings') {
       content = bookings.length
@@ -3044,10 +3119,23 @@ const App = {
         </label>`;
       }).join('');
 
+      const clubs = coach.clubs || [];
+      const disposClubs = coach.disposClubs || {};
+      const selectedClub = disposClubs[selDate] || '';
+      const clubSelector = clubs.length ? `
+        <div class="input-group" style="margin-bottom:16px">
+          <label>🏟️ Club pour cette journée</label>
+          <select class="input-field" onchange="App.setDispoClub('${selDate}',this.value)">
+            <option value="">— Sélectionner un club —</option>
+            ${clubs.map(c => `<option value="${c.nom}" ${selectedClub===c.nom?'selected':''}>${c.nom}${c.adresse?' · '+c.adresse:''}</option>`).join('')}
+          </select>
+        </div>` : `<div style="font-size:13px;color:var(--muted);margin-bottom:16px;padding:10px;background:var(--card);border-radius:8px;border:1px solid var(--border)">💡 Ajoutez vos clubs dans l'onglet "Mon profil" pour les associer à vos créneaux.</div>`;
+
       content = `
         <div style="margin-bottom:16px"><p style="color:var(--muted);font-size:13px">Activez les créneaux que vous souhaitez rendre disponibles</p></div>
         <div class="days-scroll" style="margin-bottom:20px">${dayBtns}</div>
         <div class="title-md" style="margin-bottom:12px">${new Date(selDate+'T00:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}</div>
+        ${clubSelector}
         ${slotCheckboxes}`;
     }
 
@@ -3075,6 +3163,18 @@ const App = {
                 <input type="checkbox" ${coach.niveaux.includes(n)?'checked':''} data-niveau="${n}" style="accent-color:#2cc4a8"> ${n}
               </label>`).join('')}
           </div>
+        </div>
+        <div class="input-group">
+          <label>🏟️ Mes clubs</label>
+          <div id="clubs-list" style="margin-bottom:8px">
+            ${(coach.clubs||[]).map((c,i) => `
+              <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+                <input class="input-field" style="flex:1" value="${c.nom}" placeholder="Nom du club" oninput="App._clubEdit(${i},'nom',this.value)">
+                <input class="input-field" style="flex:2" value="${c.adresse||''}" placeholder="Adresse" oninput="App._clubEdit(${i},'adresse',this.value)">
+                <button class="btn btn-danger btn-sm" onclick="App._clubRemove(${i})">✕</button>
+              </div>`).join('')}
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="App._clubAdd()">+ Ajouter un club</button>
         </div>
         <button class="btn btn-primary btn-full" onclick="App.saveCoachProfile('${coach.id}')">💾 Enregistrer le profil</button>`;
     }
@@ -3172,6 +3272,15 @@ const App = {
     this.render();
   },
 
+  setDispoClub(date, club) {
+    const coaches = DB.get('coaches');
+    const coach = coaches.find(c => c.id === Auth.currentUser.coachId);
+    if (!coach) return;
+    const disposClubs = { ...(coach.disposClubs || {}), [date]: club };
+    DB.update('coaches', coach.id, { disposClubs });
+    toast('🏟️ Club enregistré');
+  },
+
   toggleSlot(date, slot, checked) {
     const user = Auth.currentUser;
     const coaches = DB.get('coaches');
@@ -3189,6 +3298,36 @@ const App = {
     // Pas de re-render complet pour garder la fluidité des checkboxes
   },
 
+  _editingClubs: null,
+
+  _clubAdd() {
+    const coaches = DB.get('coaches');
+    const coach = coaches.find(c => c.id === Auth.currentUser.coachId);
+    if (!coach) return;
+    if (!this._editingClubs) this._editingClubs = [...(coach.clubs || [])];
+    this._editingClubs.push({ nom: '', adresse: '' });
+    this.render();
+  },
+
+  _clubRemove(i) {
+    if (!this._editingClubs) {
+      const coaches = DB.get('coaches');
+      const coach = coaches.find(c => c.id === Auth.currentUser.coachId);
+      this._editingClubs = [...(coach.clubs || [])];
+    }
+    this._editingClubs.splice(i, 1);
+    this.render();
+  },
+
+  _clubEdit(i, field, val) {
+    if (!this._editingClubs) {
+      const coaches = DB.get('coaches');
+      const coach = coaches.find(c => c.id === Auth.currentUser.coachId);
+      this._editingClubs = [...(coach.clubs || [])];
+    }
+    this._editingClubs[i][field] = val;
+  },
+
   saveCoachProfile(coachId) {
     const nom  = document.getElementById('c-nom')?.value;
     const spec = document.getElementById('c-spec')?.value;
@@ -3196,7 +3335,9 @@ const App = {
     const bio  = document.getElementById('c-bio')?.value;
     const exp  = parseInt(document.getElementById('c-exp')?.value) || 0;
     const niveaux = [...document.querySelectorAll('[data-niveau]:checked')].map(el => el.dataset.niveau);
-    DB.update('coaches', coachId, { nom, specialite: spec, ville, bio, experience: exp, niveaux });
+    const clubs = (this._editingClubs || DB.get('coaches').find(c=>c.id===coachId)?.clubs || []).filter(c => c.nom.trim());
+    this._editingClubs = null;
+    DB.update('coaches', coachId, { nom, specialite: spec, ville, bio, experience: exp, niveaux, clubs });
     toast('✅ Profil enregistré');
     this.render();
   },
