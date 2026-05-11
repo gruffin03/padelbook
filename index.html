@@ -2862,25 +2862,26 @@ const App = {
       return 1;
     };
     const renderBooking = b => {
+      const effectue = b.statut === 'confirme' && new Date(`${b.date}T${b.heure||'23:59'}`) < new Date();
       const statusMap = { en_attente: ['badge-orange','⏳ En attente'], confirme: ['badge-green','✅ Confirmé'], annule: ['badge-red','❌ Annulé'] };
-      const [cls, label] = statusMap[b.statut] || ['badge-gray','–'];
+      const [cls, label] = effectue ? ['badge-gray','✓ Effectué'] : (statusMap[b.statut] || ['badge-gray','–']);
       const alreadyReviewed = myReviewedBookings.has(b.id);
       const nb = getNbP(b);
       const prixTotal = (b.prix||0) * nb;
       const prixLabel = nb > 1 ? `${b.prix}€/pers. · Total ${prixTotal}€` : `${b.prix}€`;
       return `
-        <div class="booking-item">
-          ${avatarHtml((b.coachNom||'??').substring(0,2).toUpperCase(), 'linear-gradient(135deg,#1a2e28,#2cc4a8)', 'sm')}
+        <div class="booking-item" style="${effectue?'opacity:0.6;':''}">
+          ${avatarHtml((b.coachNom||'??').substring(0,2).toUpperCase(), effectue?'#9ca3af':'linear-gradient(135deg,#1a2e28,#2cc4a8)', 'sm')}
           <div class="booking-info">
-            <div class="booking-name">${b.coachNom}</div>
+            <div class="booking-name" style="${effectue?'color:#6b7280':''}">${b.coachNom}</div>
             <div class="booking-detail">${b.serviceLabel} · ${formatDate(b.date)} à ${b.heure}</div>
             <div class="booking-detail">${prixLabel} · Paiement sur place</div>
           </div>
           <div class="booking-actions">
             <span class="badge ${cls}">${label}</span>
-            ${b.statut === 'confirme' && !alreadyReviewed ? `<button class="btn btn-secondary btn-sm" onclick="App.openReviewModal('${b.id}')">⭐ Avis</button>` : ''}
-            ${b.statut === 'confirme' && alreadyReviewed ? `<span style="font-size:12px;color:var(--muted)">✅ Avis posté</span>` : ''}
-            ${b.statut === 'en_attente' ? `<button class="btn btn-danger btn-sm" onclick="App.cancelBooking('${b.id}')">Annuler</button>` : ''}
+            ${effectue && !alreadyReviewed ? `<button class="btn btn-secondary btn-sm" onclick="App.openReviewModal('${b.id}')">⭐ Avis</button>` : ''}
+            ${effectue && alreadyReviewed ? `<span style="font-size:12px;color:var(--muted)">✅ Avis posté</span>` : ''}
+            ${!effectue && b.statut === 'en_attente' ? `<button class="btn btn-danger btn-sm" onclick="App.cancelBooking('${b.id}')">Annuler</button>` : ''}
           </div>
         </div>`;
     };
@@ -3186,25 +3187,27 @@ const App = {
     }
 
     if (this.dashTab === 'bookings') {
+      const isEffectue = b => b.statut === 'confirme' && new Date(`${b.date}T${b.heure||'23:59'}`) < new Date();
       const renderRow = (b, blurred) => {
+        const effectue = isEffectue(b);
         const statusMap = { en_attente: ['badge-orange','⏳ En attente'], confirme: ['badge-green','✅ Confirmé'], annule: ['badge-red','❌ Annulé'] };
-        const [cls, label] = statusMap[b.statut] || ['badge-gray','–'];
+        const [cls, label] = effectue ? ['badge-gray','✓ Effectué'] : (statusMap[b.statut] || ['badge-gray','–']);
         const joueurNom = b.userNom || 'Joueur';
         const joueurInitiales = joueurNom.split(' ').map(w=>w[0]||'').join('').toUpperCase().slice(0,2);
         return `
-          <div class="booking-item" style="${blurred?'filter:blur(4px);pointer-events:none;user-select:none':''}">
-            ${avatarHtml(joueurInitiales || '?', 'linear-gradient(135deg,#1e40af,#60a5fa)', 'sm')}
-            <div class="booking-info">
-              <div class="booking-name">${joueurNom}</div>
+          <div class="booking-item" style="${blurred?'filter:blur(4px);pointer-events:none;user-select:none':''}${effectue?'opacity:0.6;':''}">
+            ${avatarHtml(joueurInitiales || '?', effectue?'#9ca3af':'linear-gradient(135deg,#1e40af,#60a5fa)', 'sm')}
+            <div class="booking-info" style="${effectue?'text-decoration:none':''}">
+              <div class="booking-name" style="${effectue?'color:#6b7280':''}"> ${joueurNom}</div>
               <div class="booking-detail">${b.serviceLabel} · ${formatDate(b.date)} à ${b.heure}</div>
               <div class="booking-detail">${b.prix}€ · Paiement sur place</div>
             </div>
             <div class="booking-actions">
               <span class="badge ${cls}">${label}</span>
-              ${!blurred && b.statut==='en_attente' ? `
+              ${!blurred && !effectue && b.statut==='en_attente' ? `
                 <button class="btn btn-primary btn-sm" onclick="App.updateBooking('${b.id}','confirme')">✓ Accepter</button>
                 <button class="btn btn-danger btn-sm" onclick="App.updateBooking('${b.id}','annule')">✗ Refuser</button>` : ''}
-              ${!blurred && b.statut==='confirme' ? `<a href="${makeGCalLink({
+              ${!blurred && !effectue && b.statut==='confirme' ? `<a href="${makeGCalLink({
                 title: 'Cours Padel — ' + b.serviceLabel + ' avec ' + (b.userNom||'Élève'),
                 date: b.date, heure: b.heure, duree: 60,
                 lieu: b.coachVille || 'Club Padel',
