@@ -1241,9 +1241,8 @@ function distance(lat1, lng1, lat2, lng2) {
 // Découverte (gratuit 30j) · Essentiel (9€/mois) · Pro (19€/mois)
 // ============================================================
 const PLANS = {
-  decouverte: { label: 'Découverte', price: 0,  color: '#9a9080', badge: '🆓', limit: 5,  priority: 0 },
-  essentiel:  { label: 'Essentiel',  price: 9,  color: '#c9a84c', badge: '⭐', limit: 999, priority: 1 },
-  pro:        { label: 'Pro',        price: 19, color: '#d4a843', badge: '🥇', limit: 999, priority: 2 },
+  decouverte: { label: 'Découverte', price: 0, color: '#9a9080', badge: '🆓', limit: 5,  priority: 0 },
+  essentiel:  { label: 'Essentiel',  price: 9, color: '#c9a84c', badge: '⭐', limit: 999, priority: 1 },
 };
 
 function planBadgeHtml(plan) {
@@ -1350,18 +1349,20 @@ function toSnake(obj) {
 // SECTION 3 — BASE DE DONNÉES (Supabase + cache mémoire)
 // ============================================================
 const DB = {
-  _cache: { coaches: [], bookings: [], reviews: [], users: [] },
+  _cache: { coaches: [], bookings: [], reviews: [], users: [], messages: [] },
 
   async init() {
     try {
-      const [cRes, bRes, rRes] = await Promise.all([
+      const [cRes, bRes, rRes, mRes] = await Promise.all([
         sb.from('coaches').select('*'),
         sb.from('bookings').select('*'),
         sb.from('reviews').select('*'),
+        sb.from('messages').select('*'),
       ]);
       this._cache.coaches  = (cRes.data  || []).map(toCamel);
       this._cache.bookings = (bRes.data  || []).map(toCamel);
       this._cache.reviews  = (rRes.data  || []).map(toCamel);
+      this._cache.messages = (mRes.data  || []).map(toCamel);
     } catch(e) {
       console.warn('Supabase init failed:', e);
     }
@@ -1579,6 +1580,7 @@ const App = {
   filterNiveau: '',
   filterPrixMax: '',
   filterDispo: false,
+  filterSort: '',
   userLocation: null,
   dashTab: 'bookings',
   adminTab: 'coaches',
@@ -2391,6 +2393,13 @@ const App = {
             <div class="filter-pill ${this.filterDispo ? 'active' : ''}" onclick="App.filterDispo=!App.filterDispo;App.render()">
               ✅ Disponibles
             </div>
+            <select class="filter-select input-field" style="border-radius:20px;font-size:12px;padding:7px 14px"
+              onchange="App.filterSort=this.value;App.render()">
+              <option value="">🔀 Pertinence</option>
+              <option value="note">⭐ Mieux noté</option>
+              <option value="prix">💰 Moins cher</option>
+              <option value="dispo">📅 Dispo aujourd'hui</option>
+            </select>
           </div>
         </div>
       </div>
@@ -2419,7 +2428,14 @@ const App = {
       const dispo = !this.filterDispo || Object.keys(c.disponibilites).length > 0;
       return match && niv && prix && dispo;
     });
+    const todayKey = (() => { const n=new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; })();
+    if (this.filterSort === 'dispo') {
+      filtered = filtered.filter(c => c.disponibilites && c.disponibilites[todayKey]);
+    }
     filtered.sort((a, b) => {
+      if (this.filterSort === 'note') return (b.rating||0) - (a.rating||0);
+      if (this.filterSort === 'prix') return (a.tarifs?.solo||0) - (b.tarifs?.solo||0);
+      // Pertinence : plan priority first, then distance
       const pa = (PLANS[a.plan]||PLANS.decouverte).priority;
       const pb2 = (PLANS[b.plan]||PLANS.decouverte).priority;
       if (pb2 !== pa) return pb2 - pa;
@@ -2451,7 +2467,7 @@ const App = {
       ? distance(this.userLocation.lat, this.userLocation.lng, coach.lat, coach.lng) + ' km · '
       : '';
     const plan = coach.plan || 'decouverte';
-    const planIcon = plan === 'pro' ? ' 🥇' : plan === 'essentiel' ? ' ⭐' : '';
+    const planIcon = plan === 'essentiel' ? ' ⭐' : '';
     return '<div class="blob-card bc-' + ci + '" data-coach-id="' + coach.id + '" onclick="App.openCoach(this.dataset.coachId)">'
       + '<div class="blob-top">'
         + '<div class="blob-circle">' + coach.initiales + '</div>'
@@ -2467,6 +2483,7 @@ const App = {
           + '<span class="blob-rating">★ ' + (coach.rating || '–') + ' (' + (coach.nbAvis || 0) + ')</span>'
           + '<span class="blob-dispo"><span class="dispo-dot"></span>' + dist + dispo + '</span>'
         + '</div>'
+        + '<button style="background:none;border:none;font-size:20px;cursor:pointer;padding:4px" data-id="' + coach.id + '" onclick="event.stopPropagation();App.toggleFavori(this.dataset.id)">' + (this.isFavori(coach.id) ? '❤️' : '🤍') + '</button>'
         + '<button class="blob-cta" data-id="' + coach.id + '" onclick="event.stopPropagation();App.openCoach(this.dataset.id)">Réserver →</button>'
       + '</div>'
     + '</div>';
@@ -2655,6 +2672,21 @@ const App = {
           <div style="height:3px;flex:1;border-radius:2px;background:${i < this.bookingStep ? '#2cc4a8' : 'var(--border)'}"></div>
           <span style="font-size:11px;font-weight:700;text-transform:uppercase;color:${i < this.bookingStep ? '#2cc4a8' : 'var(--muted)'};">${s}</span>`).join('')}
       </div>`;
+    const nbP = { solo:1, duo:2, trio:3, collectif:4 };
+    const floatingBar = this.bookingStep <= 3 ? `
+      <div style="position:fixed;bottom:0;left:0;right:0;background:var(--bg);border-top:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;z-index:200;box-shadow:0 -4px 20px rgba(0,0,0,0.15)">
+        <div style="display:flex;align-items:center;gap:10px">
+          ${avatarHtml(coach.initiales, coach.avatarColor, 'sm', coach.avatarUrl||null)}
+          <div>
+            <div style="font-weight:700;font-size:13px">${coach.nom}</div>
+            <div style="font-size:11px;color:var(--muted)">${labelMap[this.selectedService]}${this.selectedDate ? ' · '+this.selectedDate : ''}${this.selectedSlot ? ' à '+this.selectedSlot : ''}</div>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-family:Fraunces,serif;font-size:18px;font-weight:700;color:#2cc4a8">${prixMap[this.selectedService]}€<span style="font-size:11px;color:var(--muted)">/pers.</span></div>
+          ${(nbP[this.selectedService]||1)>1 ? `<div style="font-size:10px;color:var(--muted)">Total ${(prixMap[this.selectedService]||0)*(nbP[this.selectedService]||1)}€</div>` : ''}
+        </div>
+      </div>` : '';
 
     // ÉTAPE 1 : Choix de la formule
     if (this.bookingStep === 1) {
@@ -2685,7 +2717,7 @@ const App = {
             <button class="btn btn-secondary" onclick="App.go('profile',{selectedCoach:'${coach.id}'})">← Retour</button>
             <button class="btn btn-primary" style="flex:1" onclick="App.bookingStep=${nextStep};App.render()">Continuer →</button>
           </div>
-        </div>`;
+        </div>${floatingBar}`;
     }
 
     // ÉTAPE 2 : Choix du créneau
@@ -2724,7 +2756,7 @@ const App = {
               Continuer →
             </button>
           </div>
-        </div>`;
+        </div>${floatingBar}`;
     }
 
     // ÉTAPE 3 : Confirmation
@@ -2764,7 +2796,7 @@ const App = {
             <button class="btn btn-secondary" onclick="App.bookingStep=2;App.render()">← Retour</button>
             <button class="btn btn-primary" style="flex:1" onclick="App.confirmBooking()">✓ Confirmer la réservation</button>
           </div>
-        </div>`;
+        </div>${floatingBar}`;
     }
 
     // ÉTAPE 4 : Succès
@@ -2850,8 +2882,11 @@ const App = {
     const user = Auth.currentUser;
     const bookings = DB.get('bookings').filter(b => b.userId === user.id).sort((a,b) => b.createdAt.localeCompare(a.createdAt));
 
-    const tabs = ['bookings', 'reviews', 'profil'];
-    const tabLabels = { bookings: '📅 Réservations', reviews: '⭐ Mes avis', profil: '👤 Mon profil' };
+    const myMessages = DB.get('messages').filter(m => m.userId === user.id).sort((a,b) => b.date.localeCompare(a.date));
+    const unreadCount = myMessages.filter(m => !m.read).length;
+    const favCoaches = DB.get('coaches').filter(c => (user.favoris||[]).includes(c.id));
+    const tabs = ['bookings', 'favoris', 'messages', 'reviews', 'profil'];
+    const tabLabels = { bookings: '📅 Réservations', favoris: `❤️ Favoris${favCoaches.length>0?` (${favCoaches.length})`:''}`, messages: `💬 Messages${unreadCount>0?` <span style="background:#2cc4a8;color:white;border-radius:10px;font-size:10px;padding:1px 6px;font-weight:700">${unreadCount}</span>`:''}`, reviews: '⭐ Mes avis', profil: '👤 Mon profil' };
 
     const myReviewedBookings = new Set(DB.get('reviews').filter(r => r.userId === user.id).map(r => r.bookingId));
     const todayStr = new Date().toISOString().slice(0,10);
@@ -2925,7 +2960,17 @@ const App = {
         <div class="tabs">
           ${tabs.map(t => `<div class="tab ${this.dashTab===t?'active':''}" onclick="App.dashTab='${t}';App.render()">${tabLabels[t]}</div>`).join('')}
         </div>
-        ${this.dashTab === 'bookings' ? bookingsList : this.dashTab === 'reviews' ? reviewsList : `
+        ${this.dashTab === 'bookings' ? bookingsList : this.dashTab === 'favoris' ? (favCoaches.length ? `<div class="coaches-list">${favCoaches.map((c,i)=>this.buildBlobCard(c,i%20)).join('')}</div>` : `<div class="empty"><div class="empty-icon">❤️</div><div class="empty-title">Aucun favori</div><p style="color:var(--muted);font-size:14px">Cliquez sur 🤍 sur une fiche coach pour l'ajouter</p><button class="btn btn-primary" onclick="App.go('search')">Trouver un coach</button></div>`) : this.dashTab === 'messages' ? (myMessages.length ? myMessages.map(m => {
+          if (!m.read) DB.update('messages', m.id, { read: true });
+          return `<div class="card" style="margin-bottom:10px;border-left:3px solid #2cc4a8">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <span style="font-weight:700;font-size:14px">🎾 ${m.coachNom}</span>
+              <span style="font-size:11px;color:var(--muted)">${m.date}</span>
+            </div>
+            <p style="font-size:13px;color:var(--muted2);line-height:1.6;margin:0;white-space:pre-line">${m.message}</p>
+          </div>`;
+        }).join('') : '<div class="empty"><div class="empty-icon">💬</div><div class="empty-title">Aucun message</div></div>')
+        : this.dashTab === 'reviews' ? reviewsList : `
           <!-- PHOTO -->
           <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:24px;background:var(--card);border-radius:16px;border:1px solid var(--border);margin-bottom:16px">
             ${avatarHtml(user.initiales || ((user.prenom?.[0]||'')+(user.nom?.[0]||'')).toUpperCase() || '?', user.avatarColor || 'linear-gradient(135deg,#1e40af,#60a5fa)', 'lg', user.avatarUrl || null)}
@@ -3207,6 +3252,7 @@ const App = {
               ${!blurred && !effectue && b.statut==='en_attente' ? `
                 <button class="btn btn-primary btn-sm" onclick="App.updateBooking('${b.id}','confirme')">✓ Accepter</button>
                 <button class="btn btn-danger btn-sm" onclick="App.updateBooking('${b.id}','annule')">✗ Refuser</button>` : ''}
+              ${!blurred && !effectue && b.statut==='confirme' ? `<button class="btn btn-danger btn-sm" onclick="App.cancelBookingCoach('${b.id}')">Annuler</button>` : ''}
               ${!blurred && !effectue && b.statut==='confirme' ? `<a href="${makeGCalLink({
                 title: 'Cours Padel — ' + b.serviceLabel + ' avec ' + (b.userNom||'Élève'),
                 date: b.date, heure: b.heure, duree: 60,
@@ -3227,7 +3273,7 @@ const App = {
               <div style="font-size:32px">🔒</div>
               <div style="font-weight:800;color:#0d2a22;font-size:15px">+${bookings.length - 3} réservations</div>
               <div style="font-size:13px;color:#6b7280">Visible uniquement sur la version payante</div>
-              <div style="background:linear-gradient(135deg,#7c5c0a,#d4a843);color:white;padding:8px 20px;border-radius:20px;font-size:13px;font-weight:700">Passer à Essentiel →</div>
+              <div style="background:linear-gradient(135deg,#c9a84c,#2cc4a8);color:white;padding:8px 20px;border-radius:20px;font-size:13px;font-weight:700">Passer à Essentiel 9€/mois →</div>
             </div>
           </div>`;
       } else {
@@ -3507,7 +3553,7 @@ const App = {
               <span style="font-size:28px">${plan.badge}</span>
               <div style="flex:1">
                 <div style="font-weight:700">${plan.label}</div>
-                <div style="font-size:12px;color:var(--muted);margin-top:2px">${key==='decouverte'?'30 jours gratuits · 5 réservations max':key==='essentiel'?'Réservations illimitées · Profil complet':'Priorité recherche · Badge Pro · Stats avancées'}</div>
+                <div style="font-size:12px;color:var(--muted);margin-top:2px">${key==='decouverte'?'30 jours gratuits · 5 réservations max':'Réservations illimitées · Stats · Priorité recherche · Badge ⭐'}</div>
               </div>
               <div style="text-align:right">
                 <div style="font-family:Fraunces,serif;font-size:22px;font-weight:700;color:#2cc4a8">${plan.price===0?'Gratuit':plan.price+'€'}</div>
@@ -3542,7 +3588,7 @@ const App = {
                 ${coach.validated ? `<span class="badge badge-green">✅ Profil validé</span>` : `<span class="badge badge-orange">⏳ En attente validation</span>`}
                 <span class="badge badge-gray">📅 ${bookings.filter(b=>b.statut==='confirme').length} cours confirmés</span>
                 <span class="badge badge-blue">💰 ${totalRevenu}€ générés</span>
-                ${(coach.plan||'decouverte')==='decouverte' ? `<span class="badge badge-orange" style="cursor:pointer" onclick="App.dashTab='abonnement';App.render()">🆓 Formule Découverte — Passer Pro →</span>` : ''}
+                ${(coach.plan||'decouverte')==='decouverte' ? `<span class="badge badge-orange" style="cursor:pointer" onclick="App.dashTab='abonnement';App.render()">🆓 Formule Découverte — Passer à Essentiel →</span>` : ''}
               </div>
             </div>
           </div>
@@ -3558,8 +3604,40 @@ const App = {
 
   updateBooking(id, statut) {
     DB.update('bookings', id, { statut });
+    if (statut === 'confirme') {
+      const b = DB.get('bookings').find(x => x.id === id);
+      if (b) {
+        const coaches = DB.get('coaches');
+        const coach = coaches.find(c => c.id === b.coachId);
+        const msg = `Bonjour ! Votre cours de padel avec ${coach?.nom||'votre coach'} est confirmé 🎾\nRendez-vous le ${formatDate(b.date)} à ${b.heure} — ${b.serviceLabel||'cours'}.\nPaiement sur place. À bientôt !`;
+        DB.insert('messages', { userId: b.userId, coachNom: coach?.nom||'Coach', message: msg, date: new Date().toISOString().slice(0,10), bookingId: id, read: false });
+      }
+    }
     toast(statut === 'confirme' ? '✅ Réservation confirmée' : '❌ Réservation refusée');
     this.render();
+  },
+
+  cancelBookingCoach(id) {
+    if (!confirm('Annuler cette réservation confirmée ?')) return;
+    DB.update('bookings', id, { statut: 'annule' });
+    toast('Réservation annulée');
+    this.render();
+  },
+
+  toggleFavori(coachId) {
+    const user = Auth.currentUser;
+    if (!user) { this.go('login'); return; }
+    const favs = [...(user.favoris || [])];
+    const idx = favs.indexOf(coachId);
+    if (idx === -1) favs.push(coachId); else favs.splice(idx, 1);
+    user.favoris = favs;
+    DB.update('profiles', user.id, { favoris: favs });
+    toast(idx === -1 ? '❤️ Ajouté aux favoris' : 'Retiré des favoris');
+    this.render();
+  },
+
+  isFavori(coachId) {
+    return (Auth.currentUser?.favoris || []).includes(coachId);
   },
 
   setDispoClub(date, club) {
