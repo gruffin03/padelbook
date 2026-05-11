@@ -3081,8 +3081,9 @@ const App = {
 
     const bookings = DB.get('bookings').filter(b => b.coachId === coach.id).sort((a,b) => b.createdAt.localeCompare(a.createdAt));
     const pending = bookings.filter(b => b.statut === 'en_attente');
-    const tabs = ['stats', 'bookings', 'dispos', 'profil', 'tarifs', 'abonnement'];
-    const tabLabels = { stats: '📊 Tableau de bord', bookings: `📅 Réservations ${pending.length?`(${pending.length})`:''}`, dispos: '📆 Disponibilités', profil: '👤 Mon profil', tarifs: '💰 Tarifs', abonnement: '💳 Abonnement' };
+    const isPlanPaid = (coach.plan||'decouverte') !== 'decouverte';
+    const tabs = ['stats', 'bookings', 'avis', 'dispos', 'profil', 'tarifs', 'abonnement'];
+    const tabLabels = { stats: '📊 Tableau de bord', bookings: `📅 Réservations ${pending.length?`(${pending.length})`:''}`, avis: `⭐ Avis${!isPlanPaid?' 🔒':''}`, dispos: '📆 Disponibilités', profil: '👤 Mon profil', tarifs: '💰 Tarifs', abonnement: '💳 Abonnement' };
     if (!this.dashTab || this.dashTab === 'home') this.dashTab = 'stats';
 
     let content = '';
@@ -3105,12 +3106,15 @@ const App = {
       const todayStr = dateStr(now);
       const upcoming = confirmedAll.filter(b => b.date >= todayStr).sort((a,b) => a.date.localeCompare(b.date) || a.heure.localeCompare(b.heure)).slice(0, 5);
 
-      const statCard = (icon, label, value, sub) => `
-        <div style="background:white;border-radius:16px;padding:20px 24px;box-shadow:0 2px 12px rgba(0,0,0,0.06);flex:1;min-width:140px">
+      const isPaid = isPlanPaid;
+      const statCard = (icon, label, value, sub, tab) => `
+        <div onclick="${tab ? `App.dashTab='${tab}';App.render()` : ''}" style="background:white;border-radius:16px;padding:20px 24px;box-shadow:0 2px 12px rgba(0,0,0,0.06);flex:1;min-width:140px;${tab?'cursor:pointer;':''}position:relative">
           <div style="font-size:26px;margin-bottom:6px">${icon}</div>
           <div style="font-size:26px;font-weight:800;color:#0d2a22">${value}</div>
           <div style="font-size:13px;font-weight:600;color:#374151;margin-top:2px">${label}</div>
           ${sub ? `<div style="font-size:11px;color:#9ca3af;margin-top:2px">${sub}</div>` : ''}
+          ${tab && !isPaid ? `<div style="position:absolute;top:10px;right:10px;font-size:14px">🔒</div>` : ''}
+          ${tab ? `<div style="font-size:11px;color:#2cc4a8;margin-top:6px;font-weight:600">Voir le détail →</div>` : ''}
         </div>`;
 
       content = `
@@ -3126,10 +3130,10 @@ const App = {
             <div style="color:white;font-size:20px">→</div>
           </div>` : ''}
           <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:24px">
-            ${statCard('💰', 'Revenu ce mois', revenuMois + '€', 'cours confirmés')}
-            ${statCard('📅', 'Réservations confirmées', confirmedAll.length, 'total')}
-            ${statCard('⭐', 'Note moyenne', avgNote ? avgNote + '/5' : '–', reviews.length ? reviews.length + ' avis' : 'aucun avis')}
-            ${statCard('🔔', 'En attente', pending.length, 'à confirmer')}
+            ${statCard('💰', 'Revenu ce mois', revenuMois + '€', 'cours confirmés', 'bookings')}
+            ${statCard('📅', 'Réservations confirmées', confirmedAll.length, 'total', 'bookings')}
+            ${statCard('⭐', 'Note moyenne', avgNote ? avgNote + '/5' : '–', reviews.length ? reviews.length + ' avis' : 'aucun avis', 'avis')}
+            ${statCard('🔔', 'En attente', pending.length, 'à confirmer', 'bookings')}
           </div>
 
           <div style="font-size:15px;font-weight:700;color:#0d2a22;margin-bottom:12px">Prochains cours</div>
@@ -3166,35 +3170,80 @@ const App = {
     }
 
     if (this.dashTab === 'bookings') {
-      content = bookings.length
-        ? bookings.map(b => {
-            const statusMap = { en_attente: ['badge-orange','⏳ En attente'], confirme: ['badge-green','✅ Confirmé'], annule: ['badge-red','❌ Annulé'] };
-            const [cls, label] = statusMap[b.statut] || ['badge-gray','–'];
-            const joueurNom = b.userNom || 'Joueur';
-            const joueurInitiales = joueurNom.split(' ').map(w=>w[0]||'').join('').toUpperCase().slice(0,2);
-            return `
-              <div class="booking-item">
-                ${avatarHtml(joueurInitiales || '?', 'linear-gradient(135deg,#1e40af,#60a5fa)', 'sm')}
-                <div class="booking-info">
-                  <div class="booking-name">${joueurNom}</div>
-                  <div class="booking-detail">${b.serviceLabel} · ${formatDate(b.date)} à ${b.heure}</div>
-                  <div class="booking-detail">${b.prix}€ · Paiement sur place</div>
+      const renderRow = (b, blurred) => {
+        const statusMap = { en_attente: ['badge-orange','⏳ En attente'], confirme: ['badge-green','✅ Confirmé'], annule: ['badge-red','❌ Annulé'] };
+        const [cls, label] = statusMap[b.statut] || ['badge-gray','–'];
+        const joueurNom = b.userNom || 'Joueur';
+        const joueurInitiales = joueurNom.split(' ').map(w=>w[0]||'').join('').toUpperCase().slice(0,2);
+        return `
+          <div class="booking-item" style="${blurred?'filter:blur(4px);pointer-events:none;user-select:none':''}">
+            ${avatarHtml(joueurInitiales || '?', 'linear-gradient(135deg,#1e40af,#60a5fa)', 'sm')}
+            <div class="booking-info">
+              <div class="booking-name">${joueurNom}</div>
+              <div class="booking-detail">${b.serviceLabel} · ${formatDate(b.date)} à ${b.heure}</div>
+              <div class="booking-detail">${b.prix}€ · Paiement sur place</div>
+            </div>
+            <div class="booking-actions">
+              <span class="badge ${cls}">${label}</span>
+              ${!blurred && b.statut==='en_attente' ? `
+                <button class="btn btn-primary btn-sm" onclick="App.updateBooking('${b.id}','confirme')">✓ Accepter</button>
+                <button class="btn btn-danger btn-sm" onclick="App.updateBooking('${b.id}','annule')">✗ Refuser</button>` : ''}
+              ${!blurred && b.statut==='confirme' ? `<a href="${makeGCalLink({
+                title: 'Cours Padel — ' + b.serviceLabel + ' avec ' + (b.userNom||'Élève'),
+                date: b.date, heure: b.heure, duree: 60,
+                lieu: b.coachVille || 'Club Padel',
+                description: 'Cours de padel. Formule : ' + b.serviceLabel + '. Tarif : ' + b.prix + '€/pers.',
+              })}" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none">📅 Agenda</a>` : ''}
+            </div>
+          </div>`;
+      };
+      if (!isPlanPaid && bookings.length > 3) {
+        const visible = bookings.slice(0, 3);
+        const hidden = bookings.slice(3);
+        content = `
+          ${visible.map(b => renderRow(b, false)).join('')}
+          <div style="position:relative">
+            ${hidden.slice(0,2).map(b => renderRow(b, true)).join('')}
+            <div onclick="App.dashTab='abonnement';App.render()" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;cursor:pointer;background:rgba(255,255,255,0.7);border-radius:12px;backdrop-filter:blur(2px)">
+              <div style="font-size:32px">🔒</div>
+              <div style="font-weight:800;color:#0d2a22;font-size:15px">+${bookings.length - 3} réservations</div>
+              <div style="font-size:13px;color:#6b7280">Visible uniquement sur la version payante</div>
+              <div style="background:linear-gradient(135deg,#7c5c0a,#d4a843);color:white;padding:8px 20px;border-radius:20px;font-size:13px;font-weight:700">Passer à Essentiel →</div>
+            </div>
+          </div>`;
+      } else {
+        content = bookings.length
+          ? bookings.map(b => renderRow(b, false)).join('')
+          : `<div class="empty"><div class="empty-icon">📅</div><div class="empty-title">Aucune réservation reçue</div></div>`;
+      }
+    }
+
+    if (this.dashTab === 'avis') {
+      const coachReviews = DB.get('reviews').filter(r => r.coachId === coach.id);
+      if (!isPlanPaid) {
+        content = `
+          <div style="text-align:center;padding:48px 24px">
+            <div style="font-size:48px;margin-bottom:16px">🔒</div>
+            <div style="font-size:18px;font-weight:800;color:#0d2a22;margin-bottom:8px">Vos avis joueurs</div>
+            <div style="color:#6b7280;font-size:14px;margin-bottom:24px">Consultez tous les avis laissés par vos élèves.<br>Disponible uniquement sur la version payante.</div>
+            ${coachReviews.length ? `<div style="font-size:13px;color:#2cc4a8;margin-bottom:20px">Vous avez déjà <strong>${coachReviews.length} avis</strong> en attente de lecture.</div>` : ''}
+            <button class="btn btn-primary" onclick="App.dashTab='abonnement';App.render()">⭐ Passer à Essentiel — 9€/mois</button>
+          </div>`;
+      } else {
+        content = coachReviews.length
+          ? coachReviews.sort((a,b) => b.date.localeCompare(a.date)).map(r => `
+            <div class="review-card">
+              <div class="review-header">
+                <div class="review-meta">
+                  <div class="review-author">${r.auteur || 'Joueur'}</div>
+                  <div class="review-date">${r.date}</div>
                 </div>
-                <div class="booking-actions">
-                  <span class="badge ${cls}">${label}</span>
-                  ${b.statut==='en_attente' ? `
-                    <button class="btn btn-primary btn-sm" onclick="App.updateBooking('${b.id}','confirme')">✓ Accepter</button>
-                    <button class="btn btn-danger btn-sm" onclick="App.updateBooking('${b.id}','annule')">✗ Refuser</button>` : ''}
-                  ${b.statut==='confirme' ? `<a href="${makeGCalLink({
-                    title: 'Cours Padel — ' + b.serviceLabel + ' avec ' + (b.userNom||'Élève'),
-                    date: b.date, heure: b.heure, duree: 60,
-                    lieu: b.coachVille || 'Club Padel',
-                    description: 'Cours de padel. Formule : ' + b.serviceLabel + '. Tarif : ' + b.prix + '€/pers.',
-                  })}" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none">📅 Agenda</a>` : ''}
-                </div>
-              </div>`;
-          }).join('')
-        : `<div class="empty"><div class="empty-icon">📅</div><div class="empty-title">Aucune réservation reçue</div></div>`;
+                ${starsHtml(r.note, true)}
+              </div>
+              ${r.commentaire ? `<div class="review-text">${r.commentaire}</div>` : '<div style="font-size:12px;color:var(--muted);font-style:italic">Aucun commentaire</div>'}
+            </div>`).join('')
+          : `<div class="empty"><div class="empty-icon">⭐</div><div class="empty-title">Aucun avis reçu pour l'instant</div></div>`;
+      }
     }
 
     if (this.dashTab === 'dispos') {
