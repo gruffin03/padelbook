@@ -1452,6 +1452,7 @@ const Auth = {
       const { data: coach, error: coachErr } = await sb.from('coaches').insert({
         user_id: authData.user.id,
         validated: false,
+        email: data.email || '',
         nom: `${data.prenom} ${data.nom}`,
         initiales: (data.prenom[0] + data.nom[0]).toUpperCase(),
         avatar_color: avatarColor,
