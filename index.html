@@ -2933,7 +2933,7 @@ const App = {
               <span class="btn btn-secondary btn-sm">📷 Changer la photo</span>
               <input type="file" accept="image/*" style="display:none" onchange="App.uploadAvatar(this)">
             </label>
-            <p style="font-size:12px;color:var(--muted);margin:0">JPG ou PNG · max 2 Mo</p>
+            <p style="font-size:12px;color:var(--muted);margin:0">JPG ou PNG · max 4 Mo</p>
           </div>
           <!-- INFOS GÉNÉRALES -->
           <div style="font-size:13px;font-weight:700;color:#2cc4a8;text-transform:uppercase;letter-spacing:.06em;margin:8px 0 12px">Informations générales</div>
@@ -3327,7 +3327,7 @@ const App = {
             <span class="btn btn-secondary btn-sm">📷 Changer la photo</span>
             <input type="file" accept="image/*" style="display:none" onchange="App.uploadAvatar(this)">
           </label>
-          <p style="font-size:12px;color:var(--muted);margin:0">JPG ou PNG · max 2 Mo</p>
+          <p style="font-size:12px;color:var(--muted);margin:0">JPG ou PNG · max 4 Mo</p>
         </div>
         <div class="input-group"><label>Nom complet</label><input class="input-field" id="c-nom" value="${coach.nom}" placeholder="Prénom Nom"></div>
         <div class="input-group"><label>Spécialité</label><input class="input-field" id="c-spec" value="${coach.specialite}" placeholder="Ex: Moniteur Fédéral FFT"></div>
@@ -3450,6 +3450,20 @@ const App = {
               </div>`).join('')}
           </div>
           <button class="btn btn-secondary btn-sm" onclick="App._clubAdd()">+ Ajouter un club</button>
+        </div>
+        <div class="input-group" style="margin-top:8px">
+          <label>📄 Diplôme / Certificat <span style="font-weight:400;color:var(--muted)">(JPEG, PNG ou PDF · requis pour validation)</span></label>
+          ${coach.diplomeUrl ? `
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:10px 14px;background:rgba(44,196,168,0.08);border-radius:10px;border:1px solid rgba(44,196,168,0.2)">
+              <span style="font-size:20px">📄</span>
+              <span style="font-size:13px;color:#2cc4a8;font-weight:600">Diplôme déposé ✓</span>
+              <a href="${coach.diplomeUrl}" target="_blank" class="btn btn-secondary btn-sm" style="margin-left:auto;text-decoration:none">Voir</a>
+            </div>` : `<div style="font-size:12px;color:#f97316;margin-bottom:8px">⚠️ Aucun diplôme déposé — votre profil ne peut pas être validé sans diplôme</div>`}
+          <label style="cursor:pointer;display:inline-block">
+            <span class="btn btn-secondary btn-sm">📤 ${coach.diplomeUrl ? 'Remplacer le diplôme' : 'Déposer mon diplôme'}</span>
+            <input type="file" accept="image/*,.pdf" style="display:none" onchange="App.uploadDiplome(this,'${coach.id}')">
+          </label>
+          <p style="font-size:11px;color:var(--muted);margin-top:4px">Visible uniquement par l'administrateur · max 4 Mo</p>
         </div>
         <button class="btn btn-primary btn-full" onclick="App.saveCoachProfile('${coach.id}')">💾 Enregistrer le profil</button>`;
     }
@@ -3643,7 +3657,7 @@ const App = {
   async uploadAvatar(inputEl) {
     const file = inputEl.files[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { toast('❌ Image trop grande (max 2 Mo)'); return; }
+    if (file.size > 4 * 1024 * 1024) { toast('❌ Image trop grande (max 4 Mo)'); return; }
     const userId = Auth.currentUser.id;
     const ext = file.name.split('.').pop();
     const path = `${userId}/avatar.${ext}`;
@@ -3660,6 +3674,23 @@ const App = {
       if (coach) coach.avatarUrl = publicUrl;
     }
     toast('✅ Photo mise à jour !');
+    this.render();
+  },
+
+  async uploadDiplome(inputEl, coachId) {
+    const file = inputEl.files[0];
+    if (!file) return;
+    if (file.size > 4 * 1024 * 1024) { toast('❌ Fichier trop grand (max 4 Mo)'); return; }
+    const ext = file.name.split('.').pop();
+    const path = `${coachId}/diplome.${ext}`;
+    toast('⏳ Upload en cours…');
+    const { error } = await sb.storage.from('diplomes').upload(path, file, { upsert: true });
+    if (error) { toast('❌ Erreur : ' + error.message); return; }
+    const { data: { publicUrl } } = sb.storage.from('diplomes').getPublicUrl(path);
+    await sb.from('coaches').update({ diplome_url: publicUrl }).eq('id', coachId);
+    const coach = DB.get('coaches').find(c => c.id === coachId);
+    if (coach) coach.diplomeUrl = publicUrl;
+    toast('✅ Diplôme déposé !');
     this.render();
   },
 
@@ -3764,6 +3795,16 @@ const App = {
             </div>
           </div>
           ${coach.planActive===false?`<div class="badge badge-red">⛔ Abonnement suspendu manuellement</div>`:''}
+        </div>
+
+        <!-- Diplôme -->
+        <div class="card" style="margin-bottom:16px">
+          <div class="title-md" style="margin-bottom:12px">📄 Diplôme / Certificat</div>
+          ${coach.diplomeUrl ? `
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+              ${coach.diplomeUrl.match(/\.(jpg|jpeg|png|webp)$/i) ? `<img src="${coach.diplomeUrl}" style="max-width:100%;max-height:300px;border-radius:10px;border:1px solid var(--border)">` : ''}
+              <a href="${coach.diplomeUrl}" target="_blank" class="btn btn-primary">📄 Voir le diplôme</a>
+            </div>` : `<div style="color:#f97316;font-size:13px">⚠️ Aucun diplôme déposé par ce coach</div>`}
         </div>
 
         <!-- Actions rapides -->
