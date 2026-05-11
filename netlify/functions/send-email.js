@@ -1,4 +1,4 @@
-const { Resend } = require('resend');
+const nodemailer = require('nodemailer');
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
@@ -10,16 +10,26 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: 'Missing fields' }) };
   }
 
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const transporter = nodemailer.createTransport({
+    host: 'smtp-relay.brevo.com',
+    port: 587,
+    secure: false,
+    auth: {
+      user: process.env.BREVO_SMTP_USER,
+      pass: process.env.BREVO_SMTP_PASS,
+    },
+  });
+
   try {
-    await resend.emails.send({
-      from: 'PadelBook <onboarding@resend.dev>',
+    await transporter.sendMail({
+      from: '"PadelBook" <noreply@padelbook.fr>',
       to,
       subject,
       html,
     });
     return { statusCode: 200, body: JSON.stringify({ ok: true }) };
   } catch (e) {
+    console.error('sendMail error:', e.message);
     return { statusCode: 500, body: JSON.stringify({ error: e.message }) };
   }
 };
