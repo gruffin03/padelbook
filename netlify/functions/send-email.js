@@ -22,7 +22,7 @@ exports.handler = async (event) => {
 
   try {
     await transporter.sendMail({
-      from: '"PadelBook" <noreply@padelbook.fr>',
+      from: '"PadelBook" <' + process.env.BREVO_SMTP_USER + '>',
       to,
       subject,
       html,
