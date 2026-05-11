@@ -2886,7 +2886,7 @@ const App = {
         </div>`;
     };
     const upcoming = bookings.filter(b => b.date >= todayStr && b.statut !== 'annule');
-    const past = bookings.filter(b => b.date < todayStr || b.statut === 'annule');
+    const past = bookings.filter(b => b.date < todayStr && b.statut !== 'annule');
     const bookingsList = bookings.length ? `
       ${upcoming.length ? `<div style="font-size:13px;font-weight:700;color:#2cc4a8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">À venir</div>${upcoming.map(renderBooking).join('')}` : ''}
       ${past.length ? `<div style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:20px 0 10px">Passées</div>${past.map(renderBooking).join('')}` : ''}
@@ -3080,7 +3080,7 @@ const App = {
     const coach = coaches.find(c => c.id === user.coachId);
     if (!coach) return `<div class="empty"><div class="empty-title">Profil coach introuvable</div></div>`;
 
-    const bookings = DB.get('bookings').filter(b => b.coachId === coach.id).sort((a,b) => b.createdAt.localeCompare(a.createdAt));
+    const bookings = DB.get('bookings').filter(b => b.coachId === coach.id && b.statut !== 'annule').sort((a,b) => b.createdAt.localeCompare(a.createdAt));
     const pending = bookings.filter(b => b.statut === 'en_attente');
     const isPlanPaid = (coach.plan||'decouverte') !== 'decouverte';
     const tabs = ['stats', 'bookings', 'avis', 'dispos', 'profil', 'tarifs', 'abonnement'];
