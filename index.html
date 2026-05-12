@@ -2452,7 +2452,8 @@ const App = {
   },
 
   buildBlobCard(coach, ci) {
-    const firstDispo = Object.keys(coach.disponibilites || {})[0];
+    const _td = (() => { const n=new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; })();
+    const firstDispo = Object.keys(coach.disponibilites || {}).sort().find(d => d >= _td);
     const dispo = firstDispo ? dateLabel(firstDispo) : 'Aucune dispo';
     const dist = this.userLocation
       ? distance(this.userLocation.lat, this.userLocation.lng, coach.lat, coach.lng) + ' km · '
@@ -2530,7 +2531,8 @@ const App = {
       </div>`;
 
     // Calendrier des disponibilités
-    const dates = Object.keys(coach.disponibilites).sort().slice(0, 10);
+    const _todayD = (() => { const n=new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; })();
+    const dates = Object.keys(coach.disponibilites).sort().filter(d => d >= _todayD).slice(0, 10);
     const calDays = dates.map(d => {
       const isActive = this.selectedDate === d;
       return `<div class="day-btn ${isActive ? 'active' : ''}" onclick="App.selectedDate='${d}';App.selectedSlot=null;App.render()">
