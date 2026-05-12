@@ -16,7 +16,7 @@ exports.handler = async (event) => {
         'api-key': process.env.BREVO_API_KEY,
       },
       body: JSON.stringify({
-        sender: { name: 'PadelBook', email: 'contact@padelbook.fr' },
+        sender: { name: 'PadelBook', email: 'gruffin.gr@gmail.com' },
         to: [{ email: to }],
         subject,
         htmlContent: html,
