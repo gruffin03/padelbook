@@ -1502,6 +1502,7 @@ const Auth = {
     }).catch(() => {});
 
     const loaded = await this._loadProfile(authData.user.id);
+    if (loaded) loaded.email = authData.user.email;
     this.currentUser = loaded;
     return loaded;
   },
@@ -1516,12 +1517,14 @@ const Auth = {
     const { data: { session } } = await sb.auth.getSession();
     if (session?.user) {
       this.currentUser = await this._loadProfile(session.user.id);
+      if (this.currentUser) this.currentUser.email = session.user.email;
       if (this.currentUser?.role) localStorage.setItem('pb_role', this.currentUser.role);
     }
     sb.auth.onAuthStateChange(async (event, session) => {
       if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') && session?.user) {
         if (!this.currentUser) {
           this.currentUser = await this._loadProfile(session.user.id);
+          if (this.currentUser) this.currentUser.email = session.user.email;
           await DB.init();
         }
         // Rediriger hors de la page d'accueil si on y est encore
