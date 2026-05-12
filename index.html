@@ -2824,7 +2824,8 @@ const App = {
   },
 
   async confirmBooking() {
-    alert('DEBUG: email=' + (Auth.currentUser?.email || 'VIDE'));
+    const { data: { user: authUser } } = await sb.auth.getUser();
+    const userEmail = authUser?.email || '';
     const coaches = DB.get('coaches');
     const coach = coaches.find(c => c.id === this.selectedCoach);
     const prixMap = { solo: coach.tarifs.solo, duo: coach.tarifs.duo, trio: coach.tarifs.trio, collectif: coach.tarifs.collectif };
@@ -2837,7 +2838,7 @@ const App = {
         coachNom: coach.nom,
         coachVille: coach.ville,
         userNom: `${Auth.currentUser.prenom} ${Auth.currentUser.nom}`,
-        userEmail: Auth.currentUser.email || '',
+        userEmail: userEmail,
         service: this.selectedService,
         serviceLabel: labelMap[this.selectedService],
         date: this.selectedDate,
@@ -2853,7 +2854,7 @@ const App = {
 
       // Email 1 — confirmation au joueur
       sendEmail({
-        to: Auth.currentUser.email || '',
+        to: userEmail,
         subject: '🎾 Réservation reçue — PadelBook',
         html: emailTemplate({
           title: 'Réservation envoyée !',
@@ -2888,7 +2889,6 @@ const App = {
 
       this.bookingStep = 4;
       this.render();
-      setTimeout(() => toast('DEBUG: email=' + (Auth.currentUser.email || 'VIDE')), 500);
     } catch(e) {
       console.error('confirmBooking error:', e);
       toast(`❌ Erreur : ${e.message || 'Impossible de confirmer la réservation'}`, 'error');
