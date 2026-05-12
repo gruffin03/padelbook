@@ -2823,6 +2823,7 @@ const App = {
   },
 
   async confirmBooking() {
+    toast('DEBUG: email=' + (Auth.currentUser?.email || 'VIDE'));
     const coaches = DB.get('coaches');
     const coach = coaches.find(c => c.id === this.selectedCoach);
     const prixMap = { solo: coach.tarifs.solo, duo: coach.tarifs.duo, trio: coach.tarifs.trio, collectif: coach.tarifs.collectif };
