@@ -4,7 +4,11 @@ exports.handler = async (event) => {
   }
 
   const { to, subject, html } = JSON.parse(event.body || '{}');
+  console.log('sendEmail called — to:', to, 'subject:', subject);
+  console.log('API key present:', !!process.env.BREVO_API_KEY);
+
   if (!to || !subject || !html) {
+    console.log('Missing fields');
     return { statusCode: 400, body: JSON.stringify({ error: 'Missing fields' }) };
   }
 
@@ -23,6 +27,7 @@ exports.handler = async (event) => {
       }),
     });
     const data = await res.json();
+    console.log('Brevo response:', res.status, JSON.stringify(data));
     if (!res.ok) throw new Error(JSON.stringify(data));
     return { statusCode: 200, body: JSON.stringify({ ok: true }) };
   } catch (e) {
