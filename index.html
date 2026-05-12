@@ -2727,7 +2727,7 @@ const App = {
       if (this.selectedDate && coach.disponibilites[this.selectedDate]) {
         const bookings = DB.get('bookings');
         const bookedSlots = bookings.filter(b => b.coachId===coach.id && b.date===this.selectedDate && b.statut!=='annule').map(b=>b.heure);
-        slotsHtml = `<div class="slots-wrap">${coach.disponibilites[this.selectedDate].map(s => {
+        slotsHtml = `<div class="slots-wrap">${[...coach.disponibilites[this.selectedDate]].sort().map(s => {
           const booked = bookedSlots.includes(s);
           const active = this.selectedSlot === s;
           return `<button class="slot-btn ${booked?'booked':''} ${active?'active':''}" onclick="${booked?'':` App.selectedSlot='${s}';App.render()`}">${s}</button>`;
