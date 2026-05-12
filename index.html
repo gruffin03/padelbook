@@ -2713,7 +2713,8 @@ const App = {
 
     // ÉTAPE 2 : Choix du créneau
     if (this.bookingStep === 2) {
-      const dates = Object.keys(coach.disponibilites).sort().slice(0, 14);
+      const todayDate = (() => { const n=new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; })();
+      const dates = Object.keys(coach.disponibilites).sort().filter(d => d >= todayDate).slice(0, 14);
       const calDays = dates.map(d => {
         const isActive = this.selectedDate === d;
         return `<div class="day-btn ${isActive ? 'active' : ''}" onclick="App.selectedDate='${d}';App.selectedSlot=null;App.render()">
@@ -2823,7 +2824,7 @@ const App = {
   },
 
   async confirmBooking() {
-    toast('DEBUG: email=' + (Auth.currentUser?.email || 'VIDE'));
+    alert('DEBUG: email=' + (Auth.currentUser?.email || 'VIDE'));
     const coaches = DB.get('coaches');
     const coach = coaches.find(c => c.id === this.selectedCoach);
     const prixMap = { solo: coach.tarifs.solo, duo: coach.tarifs.duo, trio: coach.tarifs.trio, collectif: coach.tarifs.collectif };
