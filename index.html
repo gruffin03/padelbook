@@ -2849,6 +2849,7 @@ const App = {
         `${Auth.currentUser.prenom} ${Auth.currentUser.nom} a réservé un ${labelMap[this.selectedService]} le ${formatDate(this.selectedDate)} à ${this.selectedSlot}`
       );
 
+      toast('DEBUG email joueur: ' + (Auth.currentUser.email || 'VIDE'));
       // Email 1 — confirmation au joueur
       sendEmail({
         to: Auth.currentUser.email || '',
