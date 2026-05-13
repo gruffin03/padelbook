@@ -3899,9 +3899,9 @@ const App = {
     const ext = file.name.split('.').pop();
     const path = `${userId}/avatar.${ext}`;
     toast('⏳ Upload en cours…');
-    const { error } = await sb.storage.from('avatars').upload(path, file, { upsert: true });
+    const { error } = await sb.storage.from('AVATAR').upload(path, file, { upsert: true });
     if (error) { toast('❌ Erreur upload : ' + error.message); return; }
-    const { data: { publicUrl } } = sb.storage.from('avatars').getPublicUrl(path);
+    const { data: { publicUrl } } = sb.storage.from('AVATAR').getPublicUrl(path);
     await sb.from('profiles').update({ avatar_url: publicUrl }).eq('id', userId);
     Auth.currentUser.avatarUrl = publicUrl;
     // Si coach, mettre à jour aussi la fiche coach
@@ -3921,9 +3921,9 @@ const App = {
     const ext = file.name.split('.').pop();
     const path = `${coachId}/diplome.${ext}`;
     toast('⏳ Upload en cours…');
-    const { error } = await sb.storage.from('diplomes').upload(path, file, { upsert: true });
+    const { error } = await sb.storage.from('Diplome').upload(path, file, { upsert: true });
     if (error) { toast('❌ Erreur : ' + error.message); return; }
-    const { data: { publicUrl } } = sb.storage.from('diplomes').getPublicUrl(path);
+    const { data: { publicUrl } } = sb.storage.from('Diplome').getPublicUrl(path);
     await sb.from('coaches').update({ diplome_url: publicUrl }).eq('id', coachId);
     const coach = DB.get('coaches').find(c => c.id === coachId);
     if (coach) coach.diplomeUrl = publicUrl;
