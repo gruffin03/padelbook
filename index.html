@@ -4041,7 +4041,7 @@ const App = {
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
               ${coach.diplomeUrl.match(/\.(jpg|jpeg|png|webp)$/i) ? `<img src="${coach.diplomeUrl}" style="max-width:100%;max-height:300px;border-radius:10px;border:1px solid var(--border)">` : ''}
               <a href="${coach.diplomeUrl}" target="_blank" class="btn btn-primary">📄 Voir le diplôme</a>
-            </div>` : `<div style="color:#f97316;font-size:13px">⚠️ Aucun diplôme déposé par ce coach</div>`}
+            </div>` : `<div style="color:var(--muted);font-size:13px">Aucun diplôme déposé (optionnel)</div>`}
         </div>
 
         <!-- Actions rapides -->
