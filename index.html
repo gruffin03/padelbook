@@ -1573,7 +1573,7 @@ const Auth = {
           App.render();
         }
         // Popup bienvenue — nouveau compte si created_at < 3 minutes
-        if (!wasLoggedIn && event === 'SIGNED_IN' && this.currentUser) {
+        if (event === 'SIGNED_IN' && this.currentUser) {
           const created = new Date(session.user.created_at).getTime();
           if ((Date.now() - created) < 180000) {
             setTimeout(() => showWelcomePopup(this.currentUser.role, this.currentUser.prenom), 600);
