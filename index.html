@@ -2631,7 +2631,10 @@ const App = {
     return `
       <div class="profile-header">
         <div class="container">
-          <button class="btn btn-secondary btn-sm" onclick="App.go('search')" style="margin-bottom:20px">← Retour</button>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+            <button class="btn btn-secondary btn-sm" onclick="App.go('search')">← Retour</button>
+            <button class="btn btn-secondary btn-sm" onclick="App.shareCoach('${coach.id}','${coach.nom}')">🔗 Partager</button>
+          </div>
           <div class="profile-main">
             ${avatarHtml(coach.initiales, coach.avatarColor, 'lg', coach.avatarUrl || null)}
             <div class="profile-info">
@@ -3743,6 +3746,15 @@ const App = {
     return (Auth.currentUser?.favoris || []).includes(coachId);
   },
 
+  shareCoach(coachId, coachNom) {
+    const url = `${window.location.origin}/coach/${coachId}`;
+    if (navigator.share) {
+      navigator.share({ title: coachNom + ' — PadelBook', text: 'Réserve un cours avec ' + coachNom + ' sur PadelBook', url });
+    } else {
+      navigator.clipboard.writeText(url).then(() => toast('🔗 Lien copié !'));
+    }
+  },
+
   setDispoClub(date, club) {
     const coaches = DB.get('coaches');
     const coach = coaches.find(c => c.id === Auth.currentUser.coachId);
@@ -4401,9 +4413,14 @@ async function sendEmail({ to, subject, html }) {
 // BOOT
 // ============================================================
 (async function init() {
+  // Détecter URL publique coach : /coach/[id]
+  const pathMatch = window.location.pathname.match(/^\/coach\/([^/]+)/);
+
   // Redirection immédiate depuis localStorage
   const cachedRole = localStorage.getItem('pb_role');
-  if (cachedRole === 'coach') App.view = 'coach-dashboard';
+  if (pathMatch) {
+    App.view = 'profile';
+  } else if (cachedRole === 'coach') App.view = 'coach-dashboard';
   else if (cachedRole === 'admin') App.view = 'admin';
   else if (cachedRole === 'user') App.view = 'search';
 
@@ -4414,7 +4431,10 @@ async function sendEmail({ to, subject, html }) {
   await DB.init();
   requestNotifPermission();
 
-  if (Auth.currentUser) {
+  if (pathMatch) {
+    App.selectedCoach = pathMatch[1];
+    App.view = 'profile';
+  } else if (Auth.currentUser) {
     const role = Auth.currentUser.role;
     if (role) localStorage.setItem('pb_role', role);
     if (App.view === 'home') {
@@ -4423,10 +4443,8 @@ async function sendEmail({ to, subject, html }) {
       else App.view = 'search';
     }
   } else if (!cachedRole) {
-    // Pas de session ET pas de cache → page d'accueil
     App.view = 'home';
   }
-  // Si cachedRole existe mais session pas encore chargée → onAuthStateChange s'en occupe
   App.render();
 })();
 
