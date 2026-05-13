@@ -1572,10 +1572,11 @@ const Auth = {
         } else {
           App.render();
         }
-        // Popup bienvenue pour nouveaux comptes Google (créé dans les 30 dernières secondes)
+        // Popup bienvenue pour nouveaux comptes Google (created_at ≈ last_sign_in_at = première connexion)
         if (!wasLoggedIn && event === 'SIGNED_IN' && this.currentUser) {
-          const createdAt = new Date(session.user.created_at).getTime();
-          const isNew = (Date.now() - createdAt) < 30000;
+          const created    = new Date(session.user.created_at).getTime();
+          const lastSignIn = new Date(session.user.last_sign_in_at).getTime();
+          const isNew = Math.abs(created - lastSignIn) < 5000;
           if (isNew) {
             setTimeout(() => showWelcomePopup(this.currentUser.role, this.currentUser.prenom), 600);
           }
