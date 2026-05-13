@@ -2506,12 +2506,12 @@ const App = {
       ? distance(this.userLocation.lat, this.userLocation.lng, coach.lat, coach.lng) + ' km · '
       : '';
     const plan = coach.plan || 'decouverte';
-    const planIcon = plan === 'essentiel' ? ' ⭐' : '';
+    const isPaid = plan === 'essentiel';
     return '<div class="blob-card bc-' + ci + '" data-coach-id="' + coach.id + '" onclick="App.openCoach(this.dataset.coachId)">'
       + '<div class="blob-top">'
         + '<div class="blob-circle">' + coach.initiales + '</div>'
         + '<div class="blob-info">'
-          + '<div class="blob-name">' + coach.nom + planIcon + '</div>'
+          + '<div class="blob-name">' + coach.nom + (isPaid ? ' <span style="font-size:10px;background:#c9a84c;color:white;padding:2px 6px;border-radius:8px;font-weight:700;vertical-align:middle">⭐ ESSENTIEL</span>' : '') + '</div>'
           + '<div class="blob-spec">' + coach.specialite + '</div>'
         + '</div>'
         + '<div class="blob-price">' + coach.tarifs.solo + '€<sup>/h</sup></div>'
@@ -2639,6 +2639,7 @@ const App = {
             ${avatarHtml(coach.initiales, coach.avatarColor, 'lg', coach.avatarUrl || null)}
             <div class="profile-info">
               <div class="profile-name">${coach.nom}</div>
+              ${(coach.plan||'decouverte')==='essentiel' ? `<span style="display:inline-block;font-size:11px;background:#c9a84c;color:white;padding:3px 8px;border-radius:10px;font-weight:700;margin-top:4px">⭐ Coach Essentiel</span>` : ''}
               <div style="color:#2cc4a8;font-size:14px;margin-top:4px">${coach.specialite}</div>
               <div style="color:var(--muted);font-size:13px;margin-top:3px">📍 ${coach.ville} · ${coach.experience} ans d'expérience</div>
               <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
@@ -3263,7 +3264,15 @@ const App = {
               <div style="color:rgba(255,255,255,0.8);font-size:13px;margin-top:2px">Réservations illimitées · Profil complet · 9€/mois</div>
             </div>
             <div style="color:white;font-size:20px">→</div>
-          </div>` : ''}
+          </div>` : `
+          <div style="background:linear-gradient(135deg,#f0fdf9,#e8faf7);border:1px solid #2cc4a844;border-radius:14px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:14px">
+            <span style="font-size:24px">🔗</span>
+            <div style="flex:1">
+              <div style="font-weight:700;color:#0d2a22;font-size:14px">Partagez votre profil</div>
+              <div style="color:#6b7280;font-size:12px;margin-top:2px">Instagram, WhatsApp, SMS — attirez de nouveaux élèves</div>
+            </div>
+            <button onclick="App.shareCoach('${coach.id}','${coach.nom}')" style="background:#2cc4a8;color:white;border:none;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer">Partager →</button>
+          </div>`}
           <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:24px">
             ${statCard('💰', 'Revenu ce mois', revenuMois + '€', 'cours confirmés', 'bookings')}
             ${statCard('📅', 'Réservations confirmées', confirmedAll.length, 'total', 'bookings')}
@@ -3301,6 +3310,39 @@ const App = {
               <div style="font-size:14px;font-weight:600;color:#9ca3af">${b.prix}€</div>
             </div>`).join('')}` : ''}
 
+          ${isPlanPaid ? (() => {
+            // Graphique revenus 6 derniers mois
+            const months = [];
+            for (let i = 5; i >= 0; i--) {
+              const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - i);
+              const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+              const label = d.toLocaleDateString('fr-FR', { month: 'short' });
+              const rev = confirmedAll.filter(b => (b.date||'').startsWith(key)).reduce((s,b) => s + (b.prix||0) * getNbPersonnes(b), 0);
+              months.push({ label, rev });
+            }
+            const maxRev = Math.max(...months.map(m => m.rev), 1);
+            return `
+            <div style="background:white;border-radius:16px;padding:20px 24px;margin-bottom:20px;box-shadow:0 2px 12px rgba(0,0,0,0.06)">
+              <div style="font-size:15px;font-weight:700;color:#0d2a22;margin-bottom:16px">📊 Revenus — 6 derniers mois</div>
+              <div style="display:flex;align-items:flex-end;gap:8px;height:80px">
+                ${months.map(m => `
+                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+                    <div style="font-size:10px;font-weight:700;color:#2cc4a8">${m.rev ? m.rev+'€' : ''}</div>
+                    <div style="width:100%;background:linear-gradient(180deg,#2cc4a8,#1a9e8a);border-radius:6px 6px 0 0;height:${Math.round((m.rev/maxRev)*60)+4}px;min-height:4px"></div>
+                    <div style="font-size:10px;color:#9ca3af;text-transform:capitalize">${m.label}</div>
+                  </div>`).join('')}
+              </div>
+            </div>`;
+          })() : `
+            <div onclick="App.dashTab='abonnement';App.render()" style="cursor:pointer;background:white;border-radius:16px;padding:20px 24px;margin-bottom:20px;box-shadow:0 2px 12px rgba(0,0,0,0.06);display:flex;align-items:center;gap:16px">
+              <div style="font-size:32px">🔒</div>
+              <div>
+                <div style="font-size:14px;font-weight:700;color:#0d2a22">Graphique revenus</div>
+                <div style="font-size:12px;color:#9ca3af">Visible sur la formule Essentiel</div>
+              </div>
+              <div style="margin-left:auto;font-size:12px;color:#c9a84c;font-weight:700">Passer Essentiel →</div>
+            </div>`}
+
           ${pending.length ? `
           <div style="margin-top:20px">
             <div style="font-size:15px;font-weight:700;color:#0d2a22;margin-bottom:12px">En attente de confirmation</div>
@@ -3334,6 +3376,8 @@ const App = {
               <div class="booking-name" style="${effectue?'color:#6b7280':''}"> ${joueurNom}</div>
               <div class="booking-detail">${b.serviceLabel} · ${formatDate(b.date)} à ${b.heure}</div>
               <div class="booking-detail">${b.prix}€ · Paiement sur place</div>
+              ${isPlanPaid && b.userEmail ? `<div class="booking-detail" style="color:#2cc4a8">✉️ ${b.userEmail}</div>` : ''}
+              ${!isPlanPaid && !blurred ? `<div class="booking-detail" style="color:#c9a84c;font-size:11px;cursor:pointer" onclick="App.dashTab='abonnement';App.render()">🔒 Email joueur visible en Essentiel</div>` : ''}
             </div>
             <div class="booking-actions">
               <span class="badge ${cls}">${label}</span>

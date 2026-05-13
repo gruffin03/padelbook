@@ -88,8 +88,9 @@ exports.handler = async () => {
       }
     }
 
-    // Email au coach
-    const { data: coach } = await sb.from('coaches').select('email, nom').eq('id', b.coach_id).single();
+    // Email au coach (uniquement plan payant)
+    const { data: coach } = await sb.from('coaches').select('email, nom, plan').eq('id', b.coach_id).single();
+    if (coach && (coach.plan || 'decouverte') === 'decouverte') continue;
     if (coach?.email) {
       try {
         await sendEmail(
