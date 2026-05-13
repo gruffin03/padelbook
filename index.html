@@ -2686,6 +2686,24 @@ const App = {
           <div style="margin-top:20px">${bookBtn}</div>
         </div>
 
+        ${(coach.stages||[]).length > 0 ? `
+        <!-- Stages -->
+        <div class="card" style="margin-top:16px">
+          <div class="title-md" style="margin-bottom:14px">🏕️ Stages à venir</div>
+          ${(coach.stages||[]).filter(s => s.date >= new Date().toISOString().slice(0,10)).sort((a,b)=>a.date.localeCompare(b.date)).map(s => `
+            <div style="display:flex;align-items:flex-start;gap:14px;padding:12px 0;border-bottom:1px solid var(--border)">
+              <div style="background:linear-gradient(135deg,#2cc4a8,#1a9e8a);color:white;border-radius:10px;padding:8px 12px;text-align:center;min-width:52px;flex-shrink:0">
+                <div style="font-size:10px;font-weight:700">${new Date(s.date).toLocaleDateString('fr-FR',{month:'short'}).toUpperCase()}</div>
+                <div style="font-size:18px;font-weight:800">${new Date(s.date).getDate()}</div>
+              </div>
+              <div style="flex:1">
+                <div style="font-weight:700;font-size:14px;color:#0d2a22">${s.titre}</div>
+                <div style="font-size:12px;color:#6b7280;margin-top:3px">${s.duree} · ${s.niveau} · ${s.places} places · <strong style="color:#2cc4a8">${s.prix}€</strong></div>
+                ${s.description ? `<div style="font-size:12px;color:#9ca3af;margin-top:4px">${s.description}</div>` : ''}
+              </div>
+            </div>`).join('')}
+        </div>` : ''}
+
         <!-- Avis -->
         <div class="card" style="margin-top:16px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
@@ -3217,8 +3235,8 @@ const App = {
     const bookings = DB.get('bookings').filter(b => b.coachId === coach.id && b.statut !== 'annule').sort((a,b) => b.createdAt.localeCompare(a.createdAt));
     const pending = bookings.filter(b => b.statut === 'en_attente');
     const isPlanPaid = (coach.plan||'decouverte') !== 'decouverte';
-    const tabs = ['stats', 'bookings', 'avis', 'dispos', 'profil', 'tarifs', 'abonnement'];
-    const tabLabels = { stats: '📊 Tableau de bord', bookings: `📅 Réservations ${pending.length?`(${pending.length})`:''}`, avis: `⭐ Avis${!isPlanPaid?' 🔒':''}`, dispos: '📆 Disponibilités', profil: '👤 Mon profil', tarifs: '💰 Tarifs', abonnement: '💳 Abonnement' };
+    const tabs = ['stats', 'bookings', 'avis', 'stages', 'dispos', 'profil', 'tarifs', 'abonnement'];
+    const tabLabels = { stats: '📊 Tableau de bord', bookings: `📅 Réservations ${pending.length?`(${pending.length})`:''}`, avis: `⭐ Avis${!isPlanPaid?' 🔒':''}`, stages: `🏕️ Stages${!isPlanPaid?' 🔒':''}`, dispos: '📆 Disponibilités', profil: '👤 Mon profil', tarifs: '💰 Tarifs', abonnement: '💳 Abonnement' };
     if (!this.dashTab || this.dashTab === 'home') this.dashTab = 'stats';
 
     let content = '';
@@ -3661,6 +3679,58 @@ const App = {
     }
 
 
+    if (this.dashTab === 'stages') {
+      if (!isPlanPaid) {
+        content = `
+          <div style="text-align:center;padding:48px 24px">
+            <div style="font-size:48px;margin-bottom:16px">🏕️</div>
+            <div style="font-size:18px;font-weight:800;color:#0d2a22;margin-bottom:8px">Publicité pour vos stages</div>
+            <div style="color:#6b7280;font-size:14px;margin-bottom:24px">Créez et publiez vos stages directement sur votre profil.<br>Visible par tous les joueurs qui consultent votre fiche.</div>
+            <button class="btn btn-primary" onclick="App.dashTab='abonnement';App.render()">⭐ Passer à Essentiel — 9€/mois</button>
+          </div>`;
+      } else {
+        const stages = coach.stages || [];
+        const niveaux = ['Débutant', 'Intermédiaire', 'Avancé', 'Tous niveaux'];
+        content = `
+          <div style="margin-bottom:20px">
+            <div style="font-size:15px;font-weight:700;color:#0d2a22;margin-bottom:14px">Mes stages publiés (${stages.length})</div>
+            ${stages.length ? stages.map((s,i) => `
+              <div style="background:white;border-radius:14px;padding:16px 18px;margin-bottom:10px;box-shadow:0 2px 10px rgba(0,0,0,0.06);display:flex;align-items:flex-start;gap:14px">
+                <div style="background:linear-gradient(135deg,#2cc4a8,#1a9e8a);color:white;border-radius:10px;padding:8px 12px;text-align:center;min-width:52px;flex-shrink:0">
+                  <div style="font-size:10px;font-weight:700">${new Date(s.date).toLocaleDateString('fr-FR',{month:'short'}).toUpperCase()}</div>
+                  <div style="font-size:18px;font-weight:800">${new Date(s.date).getDate()}</div>
+                </div>
+                <div style="flex:1">
+                  <div style="font-weight:700;font-size:15px;color:#0d2a22">${s.titre}</div>
+                  <div style="font-size:12px;color:#6b7280;margin-top:3px">${s.duree} · ${s.niveau} · ${s.places} places · <strong>${s.prix}€</strong></div>
+                  ${s.description ? `<div style="font-size:12px;color:#9ca3af;margin-top:4px">${s.description}</div>` : ''}
+                </div>
+                <button onclick="App.deleteStage('${coach.id}',${i})" style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:18px;padding:4px">🗑️</button>
+              </div>`).join('') : `<div class="empty"><div class="empty-icon">🏕️</div><div class="empty-title">Aucun stage publié</div></div>`}
+          </div>
+
+          <div style="background:white;border-radius:16px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,0.06)">
+            <div style="font-size:15px;font-weight:700;color:#0d2a22;margin-bottom:16px">➕ Ajouter un stage</div>
+            <div style="display:grid;gap:10px">
+              <input id="stage-titre" class="input-field" placeholder="Titre du stage (ex: Stage intensif été)" style="background:#f9fafb;border:1px solid var(--border);border-radius:10px;padding:10px 14px">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <input id="stage-date" type="date" class="input-field" style="background:#f9fafb;border:1px solid var(--border);border-radius:10px;padding:10px 14px">
+                <input id="stage-duree" class="input-field" placeholder="Durée (ex: 3 jours)" style="background:#f9fafb;border:1px solid var(--border);border-radius:10px;padding:10px 14px">
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+                <input id="stage-prix" type="number" class="input-field" placeholder="Prix (€)" style="background:#f9fafb;border:1px solid var(--border);border-radius:10px;padding:10px 14px">
+                <input id="stage-places" type="number" class="input-field" placeholder="Nb places" style="background:#f9fafb;border:1px solid var(--border);border-radius:10px;padding:10px 14px">
+                <select id="stage-niveau" class="input-field" style="background:#f9fafb;border:1px solid var(--border);border-radius:10px;padding:10px 14px">
+                  ${niveaux.map(n => `<option>${n}</option>`).join('')}
+                </select>
+              </div>
+              <textarea id="stage-desc" class="input-field" rows="2" placeholder="Description (optionnel)" style="background:#f9fafb;border:1px solid var(--border);border-radius:10px;padding:10px 14px;resize:vertical"></textarea>
+              <button class="btn btn-primary" onclick="App.saveStage('${coach.id}')">🏕️ Publier ce stage</button>
+            </div>
+          </div>`;
+      }
+    }
+
     if (this.dashTab === 'abonnement') {
       const currentPlan = coach.plan || 'decouverte';
       const expiryLabel = planExpiryLabel(coach);
@@ -3685,7 +3755,7 @@ const App = {
               <span style="font-size:28px">${plan.badge}</span>
               <div style="flex:1">
                 <div style="font-weight:700">${plan.label}</div>
-                <div style="font-size:12px;color:var(--muted);margin-top:2px">${key==='decouverte'?'30 jours gratuits · 5 réservations max':'Réservations illimitées · Stats · Priorité recherche · Badge ⭐'}</div>
+                <div style="font-size:12px;color:var(--muted);margin-top:2px">${key==='decouverte'?'Gratuit permanent · 3 réservations visibles · Profil basique':'Réservations illimitées · Stats · Priorité recherche · Badge ⭐ · Stages'}</div>
               </div>
               <div style="text-align:right">
                 <div style="font-family:Fraunces,serif;font-size:22px;font-weight:700;color:#2cc4a8">${plan.price===0?'Gratuit':plan.price+'€'}</div>
@@ -3720,7 +3790,7 @@ const App = {
                 ${coach.validated ? `<span class="badge badge-green">✅ Profil validé</span>` : `<span class="badge badge-orange">⏳ En attente validation</span>`}
                 <span class="badge badge-gray">📅 ${bookings.filter(b=>b.statut==='confirme').length} cours confirmés</span>
                 <span class="badge badge-blue">💰 ${totalRevenu}€ générés</span>
-                ${(coach.plan||'decouverte')==='decouverte' ? `<span class="badge badge-orange" style="cursor:pointer" onclick="App.dashTab='abonnement';App.render()">🆓 Formule Découverte — Passer à Essentiel →</span>` : ''}
+                ${(coach.plan||'decouverte')==='decouverte' ? `<span class="badge badge-orange" style="cursor:pointer" onclick="App.dashTab='abonnement';App.render()">🆓 Formule Gratuite — Passer à Essentiel →</span>` : ''}
               </div>
             </div>
           </div>
@@ -3788,6 +3858,33 @@ const App = {
 
   isFavori(coachId) {
     return (Auth.currentUser?.favoris || []).includes(coachId);
+  },
+
+  saveStage(coachId) {
+    const titre  = document.getElementById('stage-titre')?.value.trim();
+    const date   = document.getElementById('stage-date')?.value;
+    const duree  = document.getElementById('stage-duree')?.value.trim();
+    const prix   = parseInt(document.getElementById('stage-prix')?.value || '0');
+    const places = parseInt(document.getElementById('stage-places')?.value || '0');
+    const niveau = document.getElementById('stage-niveau')?.value;
+    const desc   = document.getElementById('stage-desc')?.value.trim();
+    if (!titre || !date || !duree || !prix) { toast('❌ Remplis au moins le titre, la date, la durée et le prix'); return; }
+    const coach = DB.get('coaches').find(c => c.id === coachId);
+    if (!coach) return;
+    const stages = [...(coach.stages || []), { titre, date, duree, prix, places, niveau, description: desc }];
+    DB.update('coaches', coachId, { stages });
+    toast('🏕️ Stage publié !');
+    this.render();
+  },
+
+  deleteStage(coachId, index) {
+    if (!confirm('Supprimer ce stage ?')) return;
+    const coach = DB.get('coaches').find(c => c.id === coachId);
+    if (!coach) return;
+    const stages = (coach.stages || []).filter((_,i) => i !== index);
+    DB.update('coaches', coachId, { stages });
+    toast('Stage supprimé');
+    this.render();
   },
 
   shareCoach(coachId, coachNom) {
