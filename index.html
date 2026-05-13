@@ -1454,6 +1454,7 @@ const Auth = {
   },
 
   async loginWithGoogle() {
+    localStorage.setItem('pb_google_ts', Date.now());
     const { error } = await sb.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -1554,6 +1555,16 @@ const Auth = {
       this.currentUser = await this._loadProfile(session.user.id);
       if (this.currentUser) this.currentUser.email = session.user.email;
       if (this.currentUser?.role) localStorage.setItem('pb_role', this.currentUser.role);
+
+      // Popup bienvenue après redirect Google (flag posé avant le redirect)
+      const googleTs = localStorage.getItem('pb_google_ts');
+      if (googleTs && (Date.now() - parseInt(googleTs)) < 300000) {
+        localStorage.removeItem('pb_google_ts');
+        const created = new Date(session.user.created_at).getTime();
+        if ((Date.now() - created) < 180000 && this.currentUser) {
+          setTimeout(() => showWelcomePopup(this.currentUser.role, this.currentUser.prenom), 800);
+        }
+      }
     }
     sb.auth.onAuthStateChange(async (event, session) => {
       if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') && session?.user) {
@@ -1571,13 +1582,6 @@ const Auth = {
           else App.go('search');
         } else {
           App.render();
-        }
-        // Popup bienvenue — nouveau compte si created_at < 3 minutes
-        if (event === 'SIGNED_IN' && this.currentUser) {
-          const created = new Date(session.user.created_at).getTime();
-          if ((Date.now() - created) < 180000) {
-            setTimeout(() => showWelcomePopup(this.currentUser.role, this.currentUser.prenom), 600);
-          }
         }
       }
       if (event === 'SIGNED_OUT') {
