@@ -926,6 +926,8 @@ select.input-field { cursor: pointer; }
 }
 .lp-marquee span.dot { color: rgba(255,255,255,0.2); padding: 0 4px; }
 @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
 
 @media(max-width:480px) {
   .lp-h1 { font-size: 30px; }
@@ -1319,6 +1321,39 @@ function toast(msg, color = '#c9a84c') {
   setTimeout(() => el.classList.remove('show'), 3000);
 }
 
+function showWelcomePopup(role, prenom) {
+  const isCoach = role === 'coach';
+  const overlay = document.createElement('div');
+  overlay.id = 'welcome-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .25s ease';
+
+  const emoji = isCoach ? '🏆' : '🎾';
+  const title = isCoach ? `Bienvenue ${prenom} !` : `Bienvenue ${prenom} !`;
+  const sub   = isCoach
+    ? 'Votre profil coach a bien été créé.<br>Complétez-le pour être visible par les joueurs.'
+    : 'Votre compte joueur est prêt.<br>Trouvez et réservez votre premier cours en quelques clics.';
+  const btnLabel = isCoach ? 'Compléter mon profil →' : 'Chercher un coach →';
+  const btnAction = isCoach ? `App.go('coach-dashboard')` : `App.go('search')`;
+  const tip = isCoach
+    ? '💡 Notre équipe valide les profils coachs sous 24h'
+    : '✅ L\'inscription et la recherche sont 100% gratuites';
+
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:24px;max-width:400px;width:100%;padding:36px 32px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.2);animation:slideUp .3s ease">
+      <div style="font-size:56px;margin-bottom:16px;line-height:1">${emoji}</div>
+      <h2 style="font-size:22px;font-weight:800;color:#1a1a2e;margin-bottom:10px">${title}</h2>
+      <p style="font-size:14px;color:#666;line-height:1.6;margin-bottom:24px">${sub}</p>
+      <div style="background:#f0fdf9;border-left:3px solid #2cc4a8;border-radius:8px;padding:10px 14px;margin-bottom:28px;text-align:left">
+        <p style="font-size:12px;color:#1a2e28;margin:0">${tip}</p>
+      </div>
+      <button onclick="document.getElementById('welcome-overlay').remove();${btnAction}" style="background:linear-gradient(135deg,#2cc4a8,#1a9e8a);color:#fff;font-weight:700;font-size:15px;padding:14px 32px;border-radius:12px;width:100%;cursor:pointer;border:none;margin-bottom:12px">${btnLabel}</button>
+      <button onclick="document.getElementById('welcome-overlay').remove()" style="font-size:13px;color:#999;cursor:pointer;border:none;background:none;padding:4px">Passer</button>
+    </div>`;
+
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+}
+
 // ============================================================
 // SECTION 2.5 — SUPABASE CLIENT
 // ============================================================
@@ -1522,6 +1557,7 @@ const Auth = {
     }
     sb.auth.onAuthStateChange(async (event, session) => {
       if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') && session?.user) {
+        const wasLoggedIn = !!this.currentUser;
         if (!this.currentUser) {
           this.currentUser = await this._loadProfile(session.user.id);
           if (this.currentUser) this.currentUser.email = session.user.email;
@@ -1535,6 +1571,14 @@ const Auth = {
           else App.go('search');
         } else {
           App.render();
+        }
+        // Popup bienvenue pour nouveaux comptes Google (créé dans les 30 dernières secondes)
+        if (!wasLoggedIn && event === 'SIGNED_IN' && this.currentUser) {
+          const createdAt = new Date(session.user.created_at).getTime();
+          const isNew = (Date.now() - createdAt) < 30000;
+          if (isNew) {
+            setTimeout(() => showWelcomePopup(this.currentUser.role, this.currentUser.prenom), 600);
+          }
         }
       }
       if (event === 'SIGNED_OUT') {
@@ -4267,9 +4311,9 @@ const App = {
       if (pwd.length < 6) throw new Error('Le mot de passe doit contenir au moins 6 caractères');
       const user = await Auth.register({ prenom, nom, email, password: pwd, role, ville, cp });
       await DB.init();
-      toast('🎉 Compte créé avec succès !');
       if (role === 'coach') this.go('coach-dashboard');
       else this.go('search');
+      showWelcomePopup(role, prenom);
     } catch(e) {
       const el = document.getElementById('reg-err');
       if (el) { el.textContent = e.message; el.style.display = 'block'; }
