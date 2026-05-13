@@ -2986,7 +2986,7 @@ const App = {
             <span class="badge ${cls}">${label}</span>
             ${effectue && !alreadyReviewed ? `<button class="btn btn-secondary btn-sm" onclick="App.openReviewModal('${b.id}')">⭐ Avis</button>` : ''}
             ${effectue && alreadyReviewed ? `<span style="font-size:12px;color:var(--muted)">✅ Avis posté</span>` : ''}
-            ${!effectue && b.statut === 'en_attente' ? `<button class="btn btn-danger btn-sm" onclick="App.cancelBooking('${b.id}')">Annuler</button>` : ''}
+            ${!effectue && (b.statut === 'en_attente' || b.statut === 'confirme') ? `<button class="btn btn-danger btn-sm" onclick="App.cancelBooking('${b.id}')">Annuler</button>` : ''}
           </div>
         </div>`;
     };
@@ -3177,12 +3177,27 @@ const App = {
     }
   },
 
-  cancelBooking(id) {
-    if (confirm('Annuler cette réservation ?')) {
-      DB.update('bookings', id, { statut: 'annule' });
-      toast('Réservation annulée');
-      this.render();
+  async cancelBooking(id) {
+    if (!confirm('Annuler cette réservation ?')) return;
+    const booking = DB.get('bookings').find(b => b.id === id);
+    await DB.update('bookings', id, { statut: 'annule' });
+    toast('Réservation annulée');
+    // Email au coach
+    if (booking) {
+      const coach = DB.get('coaches').find(c => c.id === booking.coachId);
+      const user = Auth.currentUser;
+      if (coach?.email) {
+        sendEmail({
+          to: coach.email,
+          subject: '❌ Annulation de réservation — PadelBook',
+          html: emailTemplate({
+            title: `Annulation de réservation`,
+            body: `Bonjour ${coach.nom},<br><br>Le joueur <strong>${user.prenom} ${user.nom}</strong> a annulé sa réservation :<br><br>📅 <strong>${booking.date}</strong> à <strong>${booking.heure}</strong> — ${booking.serviceLabel || booking.service}`
+          })
+        }).catch(() => {});
+      }
     }
+    this.render();
   },
 
   // ===========================================================
